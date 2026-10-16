@@ -14,6 +14,7 @@ from fastapi import FastAPI, Request, Form, HTTPException, status
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from pathlib import Path
 
 import qrcode
@@ -337,7 +338,7 @@ async def api_admin_coupons():
 @app.post('/bristol/sync')
 async def bristol_sync():
     try:
-        bristol.sync()
+        await run_in_threadpool(bristol.sync)
         msg = ''
     except BristolError as e:
         msg = str(e)
@@ -361,7 +362,7 @@ async def bristol_sync():
 @app.get('/bristol/qr.png')
 async def bristol_qr():
     try:
-        return bristol.qr_png_response()
+        return await run_in_threadpool(bristol.qr_png_response)
     except BristolError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -593,7 +594,6 @@ async def public_card_qr(session_id: str, refresh: bool = False):
         raise HTTPException(status_code=404)
     if refresh or not _card_schedule_exists():
         try:
-            from starlette.concurrency import run_in_threadpool
             await run_in_threadpool(bristol.sync_card_codes)
         except Exception:
             pass
