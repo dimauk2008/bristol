@@ -4,6 +4,8 @@ requests>=2.31
 Pillow>=10.0
 qrcode[pil]>=8.0
 ppf-datamatrix>=0.2
+jinja2>=3.1
+python-multipart>=0.0.9
 
 # Ниже — только для трекера Avito (app/)
 sqlalchemy>=2.0
