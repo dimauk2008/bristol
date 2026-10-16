@@ -718,9 +718,18 @@ def sync() -> dict:
         num = c.get('number')
         discount, title = ocr_meta.get(num, (None, None))
         cur.execute(
-            '''INSERT OR REPLACE INTO bristol_coupons
+            '''INSERT INTO bristol_coupons
                (number, universal_coupon, coupon_type, image_url, actual_start, actual_end, discount, title, synced_at)
-               VALUES (?,?,?,?,?,?,?,?,?)''',
+               VALUES (?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(number) DO UPDATE SET
+                 universal_coupon=excluded.universal_coupon,
+                 coupon_type=excluded.coupon_type,
+                 image_url=excluded.image_url,
+                 actual_start=excluded.actual_start,
+                 actual_end=excluded.actual_end,
+                 discount=COALESCE(excluded.discount, bristol_coupons.discount),
+                 title=COALESCE(excluded.title, bristol_coupons.title),
+                 synced_at=excluded.synced_at''',
             (
                 num,
                 c.get('universal_coupon'),
