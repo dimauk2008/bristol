@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Купон — {{session.name}}{% endblock %}
+{% block body_class %}pub{% endblock %}
+
+{% block body %}
+<div class='share'>
+  <div class='ticket' style='max-width:460px'>
+    <div class='band'>
+      <div class='k'>Bristol · Купон</div>
+      <div class='t'>{{ coupon.title or coupon.universal_coupon or 'Ваш купон' }}</div>
+    </div>
+
+    <div class='body'>
+      {% if coupon.image_url %}
+      <div class='qrbox' style='display:block;padding:0;overflow:hidden'>
+        <img src='{{ coupon.image_url }}' alt='Купон' style='display:block;width:100%;border-radius:12px' onerror="this.parentNode.style.display='none'">
+      </div>
+      {% endif %}
+
+      <div class='center' style='margin:18px 0'>
+        <div class='qrbox' style='border:0;border-radius:0;box-shadow:none;padding:12px'><img class='qr coupon' src='/s/{{session.id}}/b/{{coupon.number}}/qr.png' alt='QR купона'></div>
+        <div class='small muted mt'>Покажите QR-код на кассе</div>
+      </div>
+
+      <div class='pillrow' style='margin-top:16px'>
+        {% if coupon.actual_end %}<span class='badge red'>Действует до {{ coupon.actual_end[:10] }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class='cut'></div>
+  </div>
+</div>
+{% endblock %}

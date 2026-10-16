@@ -1,0 +1,10 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+requests>=2.31
+Pillow>=10.0
+qrcode[pil]>=8.0
+ppf-datamatrix>=0.2
+
+# Ниже — только для трекера Avito (app/)
+sqlalchemy>=2.0
+beautifulsoup4>=4.12

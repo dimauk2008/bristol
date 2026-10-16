@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f1115">
+  <title>Avito Tracker</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2300aa5b'/%3E%3Ctext x='16' y='23' font-size='20' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">A</span>
+      <div class="brand-text">
+        <h1>Avito Tracker</h1>
+        <div class="brand-sub" id="brand-url">нет активного списка</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="status-pill" id="scan-status" data-state="idle">
+        <span class="dot"></span>
+        <span id="scan-status-text">Подключение…</span>
+      </div>
+      <button class="btn btn-primary" id="scan-btn"><span class="btn-label">Сканировать</span></button>
+      <button class="icon-btn" id="bell-btn" title="Уведомления">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge hidden" id="bell-badge">0</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="sources-bar">
+    <div class="chips" id="source-chips"></div>
+    <button class="btn btn-ghost" id="add-source-btn">+ Список</button>
+  </section>
+
+  <form class="source-form hidden" id="source-form">
+    <div class="field">
+      <label for="src-url">Ссылка на поиск Avito</label>
+      <input type="url" id="src-url" class="input" required placeholder="https://www.avito.ru/omsk/dlya_doma_i_dachi?q=ikea">
+      <div class="hint">Сортировка по дате (свежие сверху) включается автоматически — параметр <code>s=104</code>.</div>
+    </div>
+    <div class="field">
+      <label for="src-name">Название списка</label>
+      <input type="text" id="src-name" class="input" maxlength="200" placeholder="ikea Омск">
+    </div>
+    <div class="field">
+      <label for="src-city">Город (только этот город)</label>
+      <input type="text" id="src-city" class="input" maxlength="100" placeholder="Омск">
+      <div class="hint">Объявления других городов будут отсекаться. Код города берётся из ссылки.</div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" id="src-submit">Добавить</button>
+      <button type="button" class="btn" id="src-cancel">Отмена</button>
+    </div>
+  </form>
+
+  <section class="stats" id="stats-row">
+    <div class="stat-card"><div class="stat-value" id="stat-active">—</div><div class="stat-label">Активных объявлений</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-total">—</div><div class="stat-label">Всего в базе</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-new24">—</div><div class="stat-label">Новых за 24 часа</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-unread">—</div><div class="stat-label">Непрочитанных</div></div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="listings">Товары <span class="tab-count" id="count-listings"></span></button>
+    <button class="tab" data-tab="notifications">Уведомления <span class="tab-count" id="count-notifications"></span></button>
+    <button class="tab" data-tab="log">Журнал сканов</button>
+    <button class="tab" data-tab="settings">Настройки</button>
+  </nav>
+
+  <main>
+    <section class="panel active" id="panel-listings">
+      <div class="toolbar">
+        <div class="segmented" id="view-switch">
+          <button type="button" data-view="table" class="active">Таблица</button>
+          <button type="button" data-view="cards">Карточки</button>
+          <button type="button" data-view="compact">Компакт</button>
+        </div>
+        <input type="search" id="search-input" class="input" placeholder="Поиск по названию…" autocomplete="off">
+        <select id="fresh-select" class="input input-select" title="Показывать только свежие объявления">
+          <option value="24h">За 24 часа</option>
+          <option value="3d">За 3 дня</option>
+          <option value="7d">За 7 дней</option>
+          <option value="all">Всё время</option>
+        </select>
+        <select id="sort-select" class="input input-select">
+          <option value="recent">Сначала новые</option>
+          <option value="published">По дате публикации</option>
+          <option value="price_asc">Цена: по возрастанию</option>
+          <option value="price_desc">Цена: по убыванию</option>
+          <option value="title">По названию</option>
+        </select>
+        <label class="check"><input type="checkbox" id="only-active" checked> Только активные</label>
+        <span class="spacer"></span>
+        <span class="updated" id="updated-label">—</span>
+      </div>
+      <div class="new-banner hidden" id="new-banner" data-mode="reload">
+        <span class="new-banner-dot"></span>
+        <span id="new-banner-text"></span>
+        <button type="button" class="btn btn-sm btn-primary" id="new-banner-btn">Показать</button>
+        <button type="button" class="banner-close" id="new-banner-close" title="Скрыть">×</button>
+      </div>
+      <div id="listings-box"></div>
+      <div class="empty hidden" id="listings-empty">Ничего не найдено</div>
+      <div class="load-more hidden" id="listings-more-wrap">
+        <button class="btn" id="listings-more">Показать ещё</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-notifications">
+      <div class="toolbar">
+        <label class="check"><input type="checkbox" id="only-unread"> Только непрочитанные</label>
+        <span class="spacer"></span>
+        <span class="updated" id="notif-total-label"></span>
+        <button class="btn" id="read-all-btn">Отметить все прочитанными</button>
+      </div>
+      <div class="notif-list" id="notif-list"></div>
+      <div class="empty hidden" id="notif-empty">Уведомлений в этом списке пока нет</div>
+      <div class="load-more hidden" id="notif-more-wrap">
+        <button class="btn" id="notif-more">Показать ещё</button>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-log">
+      <div class="table-wrap">
+        <table class="data-table log-table">
+          <thead>
+            <tr><th>#</th><th>Начало</th><th>Статус</th><th>Найдено</th><th>Новых</th><th>Смена цены</th><th>Сообщение</th></tr>
+          </thead>
+          <tbody id="log-body"></tbody>
+        </table>
+      </div>
+      <div class="empty hidden" id="log-empty">Сканов в этом списке ещё не было</div>
+    </section>
+
+    <section class="panel" id="panel-settings">
+      <div class="settings-grid">
+        <form class="form" id="source-settings-form">
+          <h2 class="form-title">Текущий список</h2>
+          <div class="field">
+            <label for="set-name">Название</label>
+            <input type="text" id="set-name" class="input" maxlength="200">
+          </div>
+          <div class="field">
+            <label for="set-url">Ссылка на поиск</label>
+            <input type="url" id="set-url" class="input" required>
+          </div>
+          <div class="field">
+            <label for="set-city">Город</label>
+            <input type="text" id="set-city" class="input" maxlength="100">
+            <div class="hint">Из выдачи отсекаются объявления других городов.</div>
+          </div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="set-enabled"> Сканировать этот список</label>
+          </div>
+          <div class="field">
+            <label class="check"><input type="checkbox" id="set-sort"> Сортировать по дате (свежие сверху)</label>
+            <div class="hint">В ссылку добавляется параметр <code>s=104</code> — первая страница выдачи Avito будет отдаваться самыми свежими объявлениями.</div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <button type="button" class="btn btn-danger" id="delete-source-btn">Удалить список</button>
+            <span class="hint" id="source-msg"></span>
+          </div>
+        </form>
+
+        <form class="form" id="settings-form">
+          <h2 class="form-title">Общие настройки</h2>
+          <div class="field">
+            <label for="set-interval">Интервал опроса (минуты)</label>
+            <input type="number" id="set-interval" class="input" min="1" max="1440" step="1" required>
+            <div class="hint">Один общий интервал на все списки. Минимум 1 минута — чаще 1 раза в 5 минут делать не стоит, иначе Avito отдаст капчу.</div>
+          </div>
+          <div class="field">
+            <label>Системные уведомления браузера</label>
+            <div class="row">
+              <button type="button" class="btn" id="notify-enable">Включить</button>
+              <span class="hint" id="notify-state"></span>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <span class="hint" id="settings-msg"></span>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div class="toasts" id="toasts"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

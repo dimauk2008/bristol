@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Доступ закрыт — Bristol{% endblock %}
+{% block body %}
+<div class='share'>
+  <div class='ticket' style='max-width:420px'>
+    <div class='band'>
+      <div class='k'>Bristol</div>
+      <div class='t'>Доступ закрыт</div>
+    </div>
+    <div class='body center'>
+      <div style='width:64px;height:64px;margin:4px auto 14px;border-radius:20px;display:grid;place-items:center;background:var(--red-soft);color:var(--red)'>
+        <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' style='width:30px;height:30px'><rect x='3' y='11' width='18' height='11' rx='2'/><path d='M7 11V7a5 5 0 0110 0v4'/></svg>
+      </div>
+      <h2>Ссылка недействительна</h2>
+      <p class='muted mt'>Срок действия этой ссылки истёк или доступ отозван владельцем. Запросите новую ссылку.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

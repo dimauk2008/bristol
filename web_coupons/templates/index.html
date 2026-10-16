@@ -1,0 +1,448 @@
+{% extends 'base.html' %}
+{% block title %}Панель — Bristol{% endblock %}
+
+{% block headactions %}
+<span class='live'><span class='pulse'></span>авто-обновление</span>
+<form method='post' action='/bristol/sync' style='display:inline'>
+  <button class='btn sm ghost' type='submit'>
+    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 12a9 9 0 11-3-6.7M21 4v5h-5'/></svg>
+    Синхронизировать
+  </button>
+</form>
+<a class='btn sm ghost' href='/logout'>Выйти</a>
+{% endblock %}
+
+{% block content %}
+
+{# ---------- АККАУНТ ---------- #}
+<div class='card hero'>
+  <div class='avatar'>{{ (bristol_meta.name or 'B')[:1] }}</div>
+  <div class='who'>
+    <div class='nm'>{{ bristol_meta.name or 'Аккаунт Бристоль' }}</div>
+    <div class='sub'>{{ bristol_meta.phone or 'не синхронизирован' }}
+      {% if bristol_meta.loyalty_status %} · статус: {{ bristol_meta.loyalty_status }}{% endif %}
+      <span id='live-synced'></span>
+    </div>
+  </div>
+  <div class='stats'>
+    <div class='stat'><div class='v' id='stat-balance'>{{ bristol_meta.balance if bristol_meta.balance is not none else '—' }}</div><div class='k'>Баллы</div></div>
+    <div class='stat'><div class='v' id='stat-coupons'>{{ bristol_coupons|length }}</div><div class='k'>Купонов</div></div>
+    <div class='stat'><div class='v' id='stat-sessions'>{{ sessions|length }}</div><div class='k'>Сессий</div></div>
+  </div>
+</div>
+
+<div id='live-error'></div>
+
+{# ---------- ВКЛАДКИ ---------- #}
+<div class='tabs'>
+  <button class='tab active' data-tab='sessions'>Сессии</button>
+  <button class='tab' data-tab='bristol'>Купоны Бристоль <span class='count' id='count-bristol'>{{ bristol_coupons|length }}</span></button>
+  <button class='tab' data-tab='manual'>Ручные купоны <span class='count' id='count-manual'>{{ coupons|length }}</span></button>
+  <button class='tab' data-tab='settings'>Настройки</button>
+</div>
+
+{# ================= СЕССИИ ================= #}
+<div class='panel active' id='panel-sessions'>
+  <div class='card'>
+    <div class='sectionhead'><h2>Выдать новую сессию</h2></div>
+    <form method='post' action='/sessions/create'>
+      <div class='row'>
+        <div class='field'><label>Название (кому выдаём)</label><input name='name' placeholder='Например: Иван М.' required></div>
+        <div class='field' style='max-width:220px'>
+          <label>Срок доступа</label>
+          <select name='duration'>
+            {% for k, v in durations.items() %}<option value='{{k}}' {% if k=='1h' %}selected{% endif %}>{{v}}</option>{% endfor %}
+          </select>
+        </div>
+        <button class='btn' type='submit'>
+          <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 5v14M5 12h14'/></svg>
+          Выдать сессию
+        </button>
+      </div>
+      <div class='small muted mt'>Сессия выдаёт доступ к вашей основной карте и купонам. По истечении срока доступ закрывается автоматически.</div>
+    </form>
+  </div>
+
+  <div class='list' id='slist'>
+  {% for s in sessions %}
+    <div class='card' data-sid='{{s.id}}' data-active='{{1 if s.active else 0}}' data-remaining='{{ s.remaining if s.remaining is not none else "" }}'>
+      <div class='sectionhead'>
+        <h2>{{ s.name }}</h2>
+        <span data-badge></span>
+        <span class='spacer'></span>
+        {% if s.active %}
+          <form method='post' action='/sessions/{{s.id}}/revoke' style='display:inline'><button class='btn sm danger' type='submit'>Отозвать доступ</button></form>
+        {% else %}
+          <form method='post' action='/sessions/{{s.id}}/restore' style='display:inline'><button class='btn sm ghost' type='submit'>Вернуть доступ</button></form>
+        {% endif %}
+        <form method='post' action='/sessions/{{s.id}}/delete' style='display:inline' onsubmit='return confirm("Удалить сессию?")'><button class='btn sm danger' type='submit'>Удалить</button></form>
+      </div>
+
+      <div class='row'>
+        <div class='col' style='min-width:260px'>
+          <label>Ссылка на QR-карту</label>
+          <div class='linkpill'>
+            <span class='u mono'>/s/{{s.id}}/card</span>
+            <button class='btn sm ghost' type='button' onclick="copyText(location.origin+'/s/{{s.id}}/card','Ссылка на карту скопирована')">Копировать</button>
+          </div>
+          <div class='actions mt' style='justify-content:flex-start'>
+            <a class='btn sm success' href='/s/{{s.id}}/card' target='_blank'>Открыть карту</a>
+            <a class='btn sm ghost' href='/s/{{s.id}}/coupons' target='_blank'>Купоны сессии</a>
+          </div>
+
+          <div class='mt2 small muted'>Доступ: <b data-timer class='mono'></b></div>
+
+          <label class='mt2'>Переименовать / продлить</label>
+          <form method='post' action='/sessions/{{s.id}}/update'>
+            <div class='row'>
+              <div class='field'><input name='name' value='{{s.name}}'></div>
+              <div class='field' style='max-width:200px'>
+                <select name='duration'>
+                  <option value=''>Не менять срок</option>
+                  {% for k, v in durations.items() %}<option value='{{k}}'>{{v}}</option>{% endfor %}
+                </select>
+              </div>
+              <button class='btn sm ghost' type='submit'>Сохранить</button>
+            </div>
+          </form>
+        </div>
+        <div style='flex:none'>
+          <div class='qrbox'><a href='/s/{{s.id}}/card' target='_blank'><img class='qr sm' src='/s/{{s.id}}/card/qr.png'></a></div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+  <div class='card' id='sessions-empty' {% if sessions %}style='display:none'{% endif %}>
+    <div class='empty'>
+      <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><rect x='3' y='4' width='18' height='16' rx='3'/><path d='M3 10h18'/></svg>
+      <div>Сессий пока нет. Выдайте первую выше.</div>
+    </div>
+  </div>
+</div>
+
+{# ================= КУПОНЫ БРИСТОЛЬ ================= #}
+<div class='panel' id='panel-bristol'>
+  {% if bristol_coupons %}
+  <div class='card'>
+    <div class='sectionhead'>
+      <h2>Выдать купон</h2>
+      <span class='spacer'></span>
+      <input id='qsearch' placeholder='Поиск по номеру / коду' style='max-width:280px'>
+    </div>
+    <div class='row'>
+      <div class='field' style='max-width:360px'>
+        <label>Сессия (для ссылок «Открыть» / «Ссылка в сессии»)</label>
+        <select id='bristol-session'>
+          <option value=''>— выберите сессию —</option>
+          {% for s in sessions %}<option value='{{s.id}}'>{{s.name}}{% if not s.active %} (отозвана){% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div class='field' style='max-width:200px'>
+        <label>Срок разовой выдачи</label>
+        <select id='grant-duration'>
+          {% for k, v in durations.items() %}<option value='{{k}}' {% if k=='1h' %}selected{% endif %}>{{v}}</option>{% endfor %}
+        </select>
+      </div>
+      <div class='small muted'>«Выдать» — отдельная ссылка на купон на выбранное время (можно отозвать).</div>
+    </div>
+  </div>
+
+  <div class='list' id='blist'>
+    {% for c in bristol_coupons %}
+    <div class='item' data-search='{{c.number}} {{c.universal_coupon}}'>
+      {% if c.image_url %}<img class='thumb' src='{{c.image_url}}' loading='lazy' onerror="this.style.visibility='hidden'">{% else %}<span class='thumb'></span>{% endif %}
+      <div class='grow'>
+        <div class='ttl'>{{ c.title or c.universal_coupon or c.number }}</div>
+        <div class='cap'><span class='mono'>{{ c.number }}</span>{% if c.coupon_type %} · {{ c.coupon_type }}{% endif %}{% if c.actual_end %} · до {{ c.actual_end[:10] }}{% endif %}</div>
+      </div>
+      <div class='actions'>
+        <button class='btn sm ghost' type='button' onclick="openBristol('{{c.number}}')">Открыть</button>
+        <button class='btn sm ghost' type='button' onclick="copyBristol('{{c.number}}')">Ссылка в сессии</button>
+        <button class='btn sm' type='button' onclick="issueGrant('{{c.number}}')">Выдать</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class='card'><div class='empty'>
+    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><path d='M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h6'/><path d='M15 3h6v6M10 14L21 3'/></svg>
+    <div>Купоны ещё не синхронизированы. Нажмите «Синхронизировать».</div>
+  </div></div>
+  {% endif %}
+
+  <div class='card mt2'>
+    <div class='sectionhead'>
+      <h2>Выданные купоны</h2>
+      <span class='count' id='count-grants'>{{ grants|length }}</span>
+    </div>
+    <div class='list' id='grlist'>
+      {% for g in grants %}
+      <div class='item' data-token='{{g.token}}' data-active='{{1 if g.valid else 0}}' data-remaining='{{ g.remaining if g.remaining is not none else "" }}'>
+        <div class='grow'>
+          <div class='ttl mono'>{{ g.number }}</div>
+          <div class='cap' data-gtimer></div>
+        </div>
+        {% if g.valid %}<span class='badge ok' data-gbadge>Активна</span>{% else %}<span class='badge off' data-gbadge>Истекла</span>{% endif %}
+        <div class='actions'>
+          <button class='btn sm ghost' type='button' onclick="copyGrant('{{g.token}}')">Копировать</button>
+          {% if g.valid %}<button class='btn sm danger' type='button' onclick="revokeGrant('{{g.token}}')">Отозвать</button>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if not grants %}<div class='small muted'>Выданных купонов нет.</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+{# ================= РУЧНЫЕ КУПОНЫ ================= #}
+<div class='panel' id='panel-manual'>
+  <div class='card'>
+    <div class='sectionhead'><h2>Добавить купон</h2></div>
+    <form method='post' action='/coupons/add'>
+      <div class='row'>
+        <div class='field'><label>Код</label><input name='code' required placeholder='код купона'></div>
+        <div class='field' style='max-width:140px'><label>Значение</label><input name='value' type='number' value='0'></div>
+        <div class='field'><label>Примечание</label><input name='note' placeholder='необязательно'></div>
+        <button class='btn' type='submit'>Добавить</button>
+      </div>
+    </form>
+    <details class='mt2'>
+      <summary class='small muted' style='cursor:pointer'>Импорт списком (по одному в строке)</summary>
+      <form method='post' action='/coupons/import' class='mt'>
+        <textarea name='text' rows='4' placeholder='код1&#10;код2&#10;код3'></textarea>
+        <div class='mt'><button class='btn sm ghost' type='submit'>Импортировать</button></div>
+      </form>
+    </details>
+  </div>
+
+  {% if coupons %}
+  <div class='list'>
+    {% for c in coupons %}
+    <div class='item'>
+      <div class='grow'>
+        <div class='ttl mono'>{{ c.code }}</div>
+        <div class='cap'>{{ c.value }} · {{ c.note or 'без примечания' }}{% if c.used_at %} · использован {{ c.used_at[:10] }}{% endif %}</div>
+      </div>
+      {% if c.status=='available' %}<span class='badge ok'>Свободен</span>{% else %}<span class='badge bad'>Использован</span>{% endif %}
+      <div class='actions'>
+        {% if c.status=='available' %}
+          <form method='post' action='/coupons/{{c.id}}/use' style='display:inline'><button class='btn sm ghost' type='submit'>Использовать</button></form>
+        {% else %}
+          <form method='post' action='/coupons/{{c.id}}/unuse' style='display:inline'><button class='btn sm ghost' type='submit'>Вернуть</button></form>
+        {% endif %}
+        <form method='post' action='/coupons/{{c.id}}/delete' style='display:inline' onsubmit='return confirm("Удалить?")'><button class='btn sm danger' type='submit'>Удалить</button></form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class='card'><div class='empty'>Ручных купонов нет.</div></div>
+  {% endif %}
+</div>
+
+{# ================= НАСТРОЙКИ ================= #}
+<div class='panel' id='panel-settings'>
+  <div class='card' style='max-width:520px'>
+    <div class='sectionhead'><h2>Пароль администратора</h2></div>
+    <form method='post' action='/admin/password'>
+      <div class='field mb'><label>Текущий пароль</label><input type='password' name='current' required></div>
+      <div class='field mb2'><label>Новый пароль</label><input type='password' name='new' required minlength='4'></div>
+      <button class='btn' type='submit'>Сменить пароль</button>
+    </form>
+    <div class='small muted mt2'>Публичные страницы (карта и купоны по ссылке /s/…) доступны без пароля. Панель — только по паролю.</div>
+  </div>
+  <div class='card' style='max-width:520px'>
+    <div class='sectionhead'><h2>Сессия администратора</h2></div>
+    <a class='btn dark' href='/logout'>
+      <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9'/></svg>
+      Выйти
+    </a>
+  </div>
+</div>
+
+<script>
+/* ---------- вкладки ---------- */
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});
+    document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active')});
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------- выдача купонов ---------- */
+function bristolSid(){
+  var el=document.getElementById('bristol-session'); if(!el) return null;
+  var sid=el.value;
+  if(!sid){ toast('Сначала выберите сессию', false); return null; }
+  return sid;
+}
+function copyBristol(number){
+  var sid=bristolSid(); if(!sid) return;
+  copyText(location.origin+'/s/'+sid+'/b/'+number, 'Ссылка на купон скопирована');
+}
+function openBristol(number){
+  var sid=bristolSid(); if(!sid) return;
+  window.open('/s/'+sid+'/b/'+number, '_blank');
+}
+var q=document.getElementById('qsearch');
+if(q){ q.addEventListener('input', function(){
+  var v=this.value.toLowerCase().trim();
+  document.querySelectorAll('#blist .item').forEach(function(el){
+    var hay=(el.dataset.search||'').toLowerCase();
+    el.style.display = (!v || hay.indexOf(v)>=0) ? '' : 'none';
+  });
+});}
+
+/* ---------- авто-обновление без перезагрузки ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function fmtRemain(sec){
+  if(sec===null||sec===undefined||sec==='') return 'бессрочно';
+  sec=Math.max(0,parseInt(sec,10));
+  if(sec<=0) return 'истёк';
+  var d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60),s=sec%60;
+  function p(n){return String(n).padStart(2,'0');}
+  if(d>0) return d+'д '+h+'ч '+m+'м';
+  if(h>0) return h+':'+p(m)+':'+p(s);
+  return m+':'+p(s);
+}
+function updateSessionVisual(el){
+  var active=el.dataset.active==='1';
+  var rem=el.dataset.remaining;
+  var v=(rem===''||rem==='null')?null:parseInt(rem,10);
+  var badge=el.querySelector('[data-badge]');
+  var timer=el.querySelector('[data-timer]');
+  var expired=(v!==null && !isNaN(v) && v<=0);
+  if(badge){
+    if(!active){ badge.className='badge off'; badge.textContent='Отозвана'; }
+    else if(expired){ badge.className='badge bad'; badge.textContent='Срок истёк'; }
+    else { badge.className='badge ok'; badge.innerHTML="<span class='dot'></span>Активна"; }
+  }
+  if(timer) timer.textContent = !active ? 'отозван' : (v===null? 'бессрочно' : fmtRemain(v));
+}
+function tick(){
+  document.querySelectorAll('#slist [data-sid]').forEach(function(el){
+    var rem=el.dataset.remaining;
+    if(rem===''||rem==='null') return;
+    var v=parseInt(rem,10); if(isNaN(v)) return;
+    el.dataset.remaining=Math.max(0,v-1);
+    updateSessionVisual(el);
+  });
+  document.querySelectorAll('#grlist [data-token]').forEach(function(el){
+    if(el.dataset.active!=='1') return;
+    var rem=el.dataset.remaining;
+    if(rem===''||rem==='null') return;
+    var v=parseInt(rem,10); if(isNaN(v)) return;
+    var nv=Math.max(0,v-1);
+    el.dataset.remaining=nv;
+    if(nv<=0) el.dataset.active='0';
+    updateGrantTimer(el);
+  });
+}
+var lastBristol=null;
+function bristolItemHTML(c){
+  var img=c.image_url ? "<img class='thumb' src='"+esc(c.image_url)+"' loading='lazy' onerror=\"this.style.visibility='hidden'\">" : "<span class='thumb'></span>";
+  var cap="<span class='mono'>"+esc(c.number)+"</span>"+(c.coupon_type?" · "+esc(c.coupon_type):"")+(c.actual_end?" · до "+esc(String(c.actual_end).slice(0,10)):"");
+  return "<div class='item' data-search='"+esc((c.number||'')+' '+(c.universal_coupon||''))+"'>"+img+
+    "<div class='grow'><div class='ttl'>"+esc(c.title||c.universal_coupon||c.number)+"</div><div class='cap'>"+cap+"</div></div>"+
+    "<div class='actions'><button class='btn sm ghost' type='button' onclick=\"openBristol('"+esc(c.number)+"')\">Открыть</button>"+
+    "<button class='btn sm ghost' type='button' onclick=\"copyBristol('"+esc(c.number)+"')\">Ссылка в сессии</button>"+
+    "<button class='btn sm' type='button' onclick=\"issueGrant('"+esc(c.number)+"')\">Выдать</button></div></div>";
+}
+
+/* ---------- разовая выдача купонов ---------- */
+function grantDuration(){ var e=document.getElementById('grant-duration'); return e?e.value:'1h'; }
+function issueGrant(number){
+  fetch('/grants/create',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({number:number,duration:grantDuration()})})
+    .then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); })
+    .then(function(d){ copyText(location.origin+d.url,'Ссылка на купон скопирована'); reloadGrants(); })
+    .catch(function(){ toast('Не удалось выдать купон', false); });
+}
+function copyGrant(token){ copyText(location.origin+'/g/'+token,'Ссылка скопирована'); }
+function revokeGrant(token){
+  fetch('/grants/'+token+'/revoke',{method:'POST'}).then(function(){ reloadGrants(); }).catch(function(){ toast('Ошибка отзыва', false); });
+}
+function grantItemHTML(g){
+  var valid = g.active===1 && (g.remaining===null||g.remaining===undefined||g.remaining>0);
+  return "<div class='item' data-token='"+esc(g.token)+"' data-active='"+(valid?1:0)+"' data-remaining='"+((g.remaining===null||g.remaining===undefined)?'':g.remaining)+"'>"+
+    "<div class='grow'><div class='ttl mono'>"+esc(g.number)+"</div><div class='cap' data-gtimer></div></div>"+
+    (valid?"<span class='badge ok' data-gbadge>Активна</span>":"<span class='badge off' data-gbadge>Истекла</span>")+
+    "<div class='actions'><button class='btn sm ghost' type='button' onclick=\"copyGrant('"+esc(g.token)+"')\">Копировать</button>"+
+    (valid?"<button class='btn sm danger' type='button' onclick=\"revokeGrant('"+esc(g.token)+"')\">Отозвать</button>":"")+
+    "</div></div>";
+}
+function updateGrantTimer(el){
+  var t=el.querySelector('[data-gtimer]'); if(!t) return;
+  if(el.dataset.active!=='1'){ t.textContent=''; return; }
+  var rem=el.dataset.remaining;
+  if(rem===''||rem==='null'){ t.textContent='бессрочно'; return; }
+  t.textContent='осталось '+fmtRemain(rem);
+}
+function updateGrantVisual(g){
+  var el=document.querySelector("#grlist [data-token='"+g.token+"']"); if(!el) return;
+  var valid = g.active===1 && (g.remaining===null||g.remaining===undefined||g.remaining>0);
+  el.dataset.active = valid?'1':'0';
+  el.dataset.remaining = (g.remaining===null||g.remaining===undefined)?'':g.remaining;
+  var b=el.querySelector('[data-gbadge]');
+  if(b){ b.className = valid?'badge ok':'badge off'; b.textContent = valid?'Активна':'Истекла'; }
+  updateGrantTimer(el);
+}
+function renderGrants(list){
+  var el=document.getElementById('grlist'); if(!el) return;
+  el.innerHTML = list.length ? list.map(grantItemHTML).join('') : "<div class='small muted'>Выданных купонов нет.</div>";
+  var c=document.getElementById('count-grants'); if(c) c.textContent=list.length;
+  list.forEach(updateGrantVisual);
+}
+function reloadGrants(){
+  fetch('/api/admin/data').then(function(r){return r.json();}).then(function(d){ renderGrants(d.grants||[]); }).catch(function(){});
+}
+function reloadBristol(){
+  fetch('/api/admin/coupons').then(function(r){return r.json();}).then(function(d){
+    var list=document.getElementById('blist'); if(!list) return;
+    list.innerHTML=(d.coupons||[]).map(bristolItemHTML).join('');
+    var qs=document.getElementById('qsearch');
+    if(qs && qs.value){ qs.dispatchEvent(new Event('input')); }
+  }).catch(function(){});
+}
+function poll(){
+  fetch('/api/admin/data').then(function(r){ if(r.status===401){ location.href='/login'; return null; } return r.json(); }).then(function(d){
+    if(!d) return;
+    var m=d.meta||{};
+    var b=document.getElementById('stat-balance'); if(b) b.textContent=(m.balance===null||m.balance===undefined)?'—':m.balance;
+    var sc=document.getElementById('stat-coupons'); if(sc) sc.textContent=d.counts.bristol;
+    var ss=document.getElementById('stat-sessions'); if(ss) ss.textContent=d.sessions.length;
+    var cb=document.getElementById('count-bristol'); if(cb) cb.textContent=d.counts.bristol;
+    var cm=document.getElementById('count-manual'); if(cm) cm.textContent=d.counts.manual;
+    var syn=document.getElementById('live-synced');
+    if(syn && m.synced_at){ syn.textContent=' · синхр. '+new Date(m.synced_at).toLocaleTimeString('ru-RU'); }
+    var errBox=document.getElementById('live-error');
+    if(errBox){ errBox.innerHTML = d.last_error ? ("<div class='card' style='border-color:#fbd1cc;background:#fff8f7;display:flex;gap:10px;align-items:center'><span class='badge bad'>Ошибка синхронизации</span><span class='small'>"+esc(d.last_error)+"</span></div>") : ""; }
+    var ids={};
+    d.sessions.forEach(function(s){
+      ids[s.id]=1;
+      var el=document.querySelector("#slist [data-sid='"+s.id+"']"); if(!el) return;
+      el.dataset.active=s.active?'1':'0';
+      el.dataset.remaining=(s.remaining===null||s.remaining===undefined)?'':s.remaining;
+      updateSessionVisual(el);
+    });
+    var any=Object.keys(ids).length>0;
+    var empty=document.getElementById('sessions-empty');
+    if(empty) empty.style.display = any ? 'none' : '';
+    if(d.grants){ d.grants.forEach(updateGrantVisual); }
+    if(lastBristol!==null && lastBristol!==d.counts.bristol){ reloadBristol(); }
+    lastBristol=d.counts.bristol;
+  }).catch(function(){});
+}
+document.querySelectorAll('#slist [data-sid]').forEach(updateSessionVisual);
+document.querySelectorAll('#grlist [data-token]').forEach(updateGrantTimer);
+setInterval(tick,1000);
+setInterval(poll,3000);
+poll();
+
+{% if perr %}{% if perr=='1' %}toast('Неверный текущий пароль', false);{% elif perr=='2' %}toast('Пароль слишком короткий', false);{% endif %}{% endif %}
+{% if pok %}toast('Пароль изменён');{% endif %}
+</script>
+{% endblock %}

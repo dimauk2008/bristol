@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Купоны — {{session.name}}{% endblock %}
+{% block body_class %}pub{% endblock %}
+
+{% block body %}
+<div class='header'>
+  <div class='inner'>
+    <a class='brand' href='/s/{{session.id}}/card' style='text-decoration:none'>
+      <span class='logo'>B</span>
+      <span>Bristol<small>Купоны · {{session.name}}</small></span>
+    </a>
+    <span class='spacer'></span>
+    <a class='btn sm ghost' href='/s/{{session.id}}/card'>Карта</a>
+  </div>
+</div>
+
+<div class='wrap' style='max-width:760px'>
+  <div class='card' style='padding:16px 20px'>
+    <div class='sectionhead' style='margin:0'>
+      <h2>Мои купоны</h2>
+      <span class='count'>{{ bristol_coupons|length }}</span>
+      <span class='spacer'></span>
+      <input id='csearch' placeholder='Поиск' style='max-width:220px'>
+    </div>
+  </div>
+
+  {% if bristol_coupons %}
+  <div class='list mt2' id='clist'>
+    {% for c in bristol_coupons %}
+    <a class='item' data-search='{{c.number}} {{c.universal_coupon}}' href='/s/{{session.id}}/b/{{c.number}}' style='text-decoration:none'>
+      {% if c.image_url %}<img class='thumb' src='{{c.image_url}}' loading='lazy' onerror="this.style.visibility='hidden'">{% else %}<span class='thumb'></span>{% endif %}
+      <div class='grow'>
+        <div class='ttl'>{{ c.title or c.universal_coupon or c.number }}</div>
+        <div class='cap'><span class='mono'>{{ c.number }}</span>{% if c.actual_end %} · до {{ c.actual_end[:10] }}{% endif %}</div>
+      </div>
+      <span class='badge red'>Показать QR</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class='card mt2'><div class='empty'>Купонов нет или они ещё не синхронизированы.</div></div>
+  {% endif %}
+
+  {% if coupons %}
+  <div class='card mt2'>
+    <div class='sectionhead'><h2>Подарочные купоны</h2></div>
+    <div class='list'>
+      {% for c in coupons %}
+      <div class='item'>
+        <div class='grow'>
+          <div class='ttl mono'>{{ c.code }}</div>
+          <div class='cap'>{{ c.value }} · {{ c.note or '' }}</div>
+        </div>
+        <a class='btn sm success' href='/s/{{session.id}}/coupon/{{c.code}}' onclick="return confirm('Получить купон {{c.code}}?')">Получить</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+var q=document.getElementById('csearch');
+if(q){ q.addEventListener('input', function(){
+  var v=this.value.toLowerCase().trim();
+  document.querySelectorAll('#clist .item').forEach(function(el){
+    var hay=(el.dataset.search||'').toLowerCase();
+    el.style.display=(!v||hay.indexOf(v)>=0)?'':'none';
+  });
+});}
+</script>
+{% endblock %}

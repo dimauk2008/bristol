@@ -1,0 +1,40 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- БД и локальное состояние (не коммитить) ---
+avito.db
+avito.db-*
+avito.db.bak
+coupons.db
+coupons.db-*
+
+# --- Секреты/токены ---
+cookies.json
+bristol_prefs.xml
+capture/flutter_prefs.xml
+capture/credentials.json
+capture/hive.hive
+.env
+
+# --- Крупные бинарники и артефакты ---
+capture/bristol.apk
+capture/flows/
+capture/bundle/
+_tess_setup.exe
+game_auto/screen.png
+game_auto/screen_small.png
+ref.png
+ref_card.png
+_dm_sample.png
+_ocrtmp/
+
+# --- Логи/пидашники ---
+*.log
+*.err
+*.pid
+uvicorn.pid
+capture/_pid.txt
+
+.DS_Store

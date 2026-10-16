@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Карта лояльности — {{session.name}}{% endblock %}
+{% block body_class %}pub{% endblock %}
+
+{% block body %}
+<div class='share'>
+  <div class='ticket'>
+    <div class='band'>
+      <div class='k'>Bristol · Карта лояльности</div>
+      <div class='t'>{{ session.name }}</div>
+    </div>
+
+    <div class='body center'>
+      {% if card_data %}
+      <div class='qrbox'><img id='cardqr' class='qr md' src='/s/{{session.id}}/card/qr.png' alt='QR карты'></div>
+      <div class='small muted mt' id='qrtitle'>Покажите QR-код на кассе для начисления баллов</div>
+      {% else %}
+      <div class='empty'>
+        <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'><rect x='3' y='3' width='18' height='18' rx='3'/><path d='M7 7h4v4H7zM13 7h4M13 11h4M7 13h4M7 17h4M13 15h4M17 15h.01M17 19h.01M9 19h.01'/></svg>
+        <div>QR-код карты недоступен.<br>Попросите администратора синхронизировать данные.</div>
+      </div>
+      {% endif %}
+
+      <div class='pillrow' style='margin-top:20px'>
+        {% if bristol_meta.balance is not none and bristol_meta.balance != '' %}
+        <span class='badge red'><b>{{ bristol_meta.balance }}</b>&nbsp;баллов</span>
+        {% endif %}
+        {% if bristol_meta.loyalty_status %}<span class='badge ok'><span class='dot'></span>{{ bristol_meta.loyalty_status }}</span>{% endif %}
+      </div>
+    </div>
+
+    <div class='cut'></div>
+
+    <div class='body center' style='padding-top:16px'>
+      <div class='small muted'>Обновляется автоматически · {{ bristol_meta.synced_at[:16] if bristol_meta.synced_at else '—' }}</div>
+      {% if remaining is not none %}<div class='small muted mt' id='acctimer' data-rem='{{remaining}}'></div>{% endif %}
+      <a class='btn ghost sm mt' href='/s/{{session.id}}/coupons'>Открыть мои купоны</a>
+    </div>
+  </div>
+</div>
+
+{% if card_data %}
+<script>
+setInterval(function(){
+  var img=document.getElementById('cardqr');
+  if(img) img.src='/s/{{session.id}}/card/qr.png?t='+Date.now();
+}, 60000);
+</script>
+{% endif %}
+<script>
+(function(){
+  var e=document.getElementById('acctimer'); if(!e) return;
+  var v=parseInt(e.dataset.rem,10); if(isNaN(v)){ e.textContent=''; return; }
+  function p(n){return String(n).padStart(2,'0');}
+  function f(){
+    var s=Math.max(0,v);
+    var d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),ss=s%60;
+    e.textContent='Доступ: '+(d>0?d+'д '+h+'ч':(h>0?h+':'+p(m)+':'+p(ss):m+':'+p(ss)));
+    v--;
+  }
+  f(); setInterval(f,1000);
+})();
+</script>
+{% endblock %}
