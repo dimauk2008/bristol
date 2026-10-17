@@ -1,21 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Панель — Bristol{% endblock %}
 
-{% block head %}
-<style>
-#blist.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
-.ccard{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:transform .12s ease,box-shadow .12s ease}
-.ccard:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:#e3e6ec}
-.ccard .cimg{width:100%;height:auto;display:block;background:#f2f3f5;object-fit:contain}
-.ccard .cimg.empty{aspect-ratio:16/10}
-.ccard .cbody{padding:12px 14px 2px;display:flex;flex-direction:column;gap:4px}
-.ccard .cttl{font-weight:700;letter-spacing:-.01em;line-height:1.3}
-.ccard .ccap{color:var(--muted);font-size:12.5px;word-break:break-word}
-.ccard .cactions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 14px;margin-top:auto}
-@media(max-width:520px){#blist.cgrid{grid-template-columns:1fr}}
-</style>
-{% endblock %}
-
 {% block headactions %}
 <span class='live'><span class='pulse'></span>авто-обновление</span>
 <form method='post' action='/bristol/sync' style='display:inline'>
@@ -177,15 +162,15 @@
     </div>
   </div>
 
-  <div class='cgrid' id='blist'>
+  <div class='list' id='blist'>
     {% for c in bristol_coupons %}
-    <div class='ccard' data-search='{{c.number}} {{c.universal_coupon}}'>
-      {% if c.image_url %}<img class='cimg' src='{{c.image_url}}' loading='lazy' onerror="this.style.visibility='hidden'">{% else %}<div class='cimg empty'></div>{% endif %}
-      <div class='cbody'>
-        <div class='cttl'>{{ c.title or c.universal_coupon or c.number }}</div>
-        <div class='ccap'><span class='mono'>{{ c.number }}</span>{% if c.coupon_type %} · {{ c.coupon_type }}{% endif %}{% if c.actual_end %} · до {{ c.actual_end[:10] }}{% endif %}</div>
+    <div class='item' data-search='{{c.number}} {{c.universal_coupon}}'>
+      {% if c.image_url %}<img class='thumb' src='{{c.image_url}}' loading='lazy' onerror="this.style.visibility='hidden'">{% else %}<span class='thumb'></span>{% endif %}
+      <div class='grow'>
+        <div class='ttl'>{{ c.title or c.universal_coupon or c.number }}</div>
+        <div class='cap'><span class='mono'>{{ c.number }}</span>{% if c.coupon_type %} · {{ c.coupon_type }}{% endif %}{% if c.actual_end %} · до {{ c.actual_end[:10] }}{% endif %}</div>
       </div>
-      <div class='cactions'>
+      <div class='actions'>
         <button class='btn sm ghost' type='button' onclick="openBristol('{{c.number}}')">Открыть</button>
         <button class='btn sm ghost' type='button' onclick="copyBristol('{{c.number}}')">Ссылка в сессии</button>
         <button class='btn sm' type='button' onclick="issueGrant('{{c.number}}')">Выдать</button>
@@ -364,7 +349,7 @@ function openBristol(number){
 var q=document.getElementById('qsearch');
 if(q){ q.addEventListener('input', function(){
   var v=this.value.toLowerCase().trim();
-  document.querySelectorAll('#blist .ccard').forEach(function(el){
+  document.querySelectorAll('#blist .item').forEach(function(el){
     var hay=(el.dataset.search||'').toLowerCase();
     el.style.display = (!v || hay.indexOf(v)>=0) ? '' : 'none';
   });
@@ -417,11 +402,11 @@ function tick(){
 }
 var lastBristol=null;
 function bristolItemHTML(c){
-  var img=c.image_url ? "<img class='cimg' src='"+esc(c.image_url)+"' loading='lazy' onerror=\"this.style.visibility='hidden'\">" : "<div class='cimg empty'></div>";
+  var img=c.image_url ? "<img class='thumb' src='"+esc(c.image_url)+"' loading='lazy' onerror=\"this.style.visibility='hidden'\">" : "<span class='thumb'></span>";
   var cap="<span class='mono'>"+esc(c.number)+"</span>"+(c.coupon_type?" · "+esc(c.coupon_type):"")+(c.actual_end?" · до "+esc(String(c.actual_end).slice(0,10)):"");
-  return "<div class='ccard' data-search='"+esc((c.number||'')+' '+(c.universal_coupon||''))+"'>"+img+
-    "<div class='cbody'><div class='cttl'>"+esc(c.title||c.universal_coupon||c.number)+"</div><div class='ccap'>"+cap+"</div></div>"+
-    "<div class='cactions'><button class='btn sm ghost' type='button' onclick=\"openBristol('"+esc(c.number)+"')\">Открыть</button>"+
+  return "<div class='item' data-search='"+esc((c.number||'')+' '+(c.universal_coupon||''))+"'>"+img+
+    "<div class='grow'><div class='ttl'>"+esc(c.title||c.universal_coupon||c.number)+"</div><div class='cap'>"+cap+"</div></div>"+
+    "<div class='actions'><button class='btn sm ghost' type='button' onclick=\"openBristol('"+esc(c.number)+"')\">Открыть</button>"+
     "<button class='btn sm ghost' type='button' onclick=\"copyBristol('"+esc(c.number)+"')\">Ссылка в сессии</button>"+
     "<button class='btn sm' type='button' onclick=\"issueGrant('"+esc(c.number)+"')\">Выдать</button></div></div>";
 }
