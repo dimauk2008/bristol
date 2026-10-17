@@ -644,11 +644,16 @@ async def public_card(request: Request, session_id: str):
         return _expired_page(request, session_id)
     aid = s.get('account_id')
     card_data = bristol.get_card_qr(aid)
+    try:
+        coupons_count = len(bristol.available_bristol_coupons(aid))
+    except Exception:
+        coupons_count = 0
     return templates.TemplateResponse(request, 'card-ses.html', {
         'session': s,
         'card_data': card_data,
         'remaining': _remaining(s.get('expires_at')),
         'bristol_meta': bristol.get_meta(aid),
+        'coupons_count': coupons_count,
     })
 
 
