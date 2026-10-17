@@ -15,7 +15,194 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from db import get_conn
+from db import get_conn, get_active_account_id, set_active_account_id
+
+
+# ---------- аккаунты ----------
+
+def _aid(account_id=None) -> int:
+    return int(account_id) if account_id is not None else get_active_account_id()
+
+
+def _set_meta(account_id, key, value) -> None:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        'INSERT INTO bristol_meta (account_id, key, value) VALUES (?,?,?) '
+        'ON CONFLICT(account_id, key) DO UPDATE SET value=excluded.value',
+        (int(account_id), key, json.dumps(value, ensure_ascii=False)),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _get_meta(account_id, key):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT value FROM bristol_meta WHERE account_id=? AND key=?', (int(account_id), key))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    try:
+        return json.loads(row['value'])
+    except Exception:
+        return row['value']
+
+
+def _account_touch(account_id, **fields) -> None:
+    keys = ('name', 'phone', 'card_id', 'external_id', 'refresh_token', 'token')
+    sets, vals = [], []
+    for k in keys:
+        v = fields.get(k)
+        if v is not None:
+            sets.append(f'{k}=?')
+            vals.append(v)
+    if not sets:
+        return
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT id FROM accounts WHERE id=?', (int(account_id),))
+    if not cur.fetchone():
+        cur.execute('INSERT INTO accounts (id) VALUES (?)', (int(account_id),))
+    vals.append(int(account_id))
+    cur.execute(f"UPDATE accounts SET {', '.join(sets)} WHERE id=?", vals)
+    conn.commit()
+    conn.close()
+
+
+def _card_id_from_phone(phone: str) -> str:
+    d = re.sub(r'\D', '', phone or '')
+    if d.startswith('7') and len(d) == 11:
+        d = d[1:]
+    return d
+
+
+def accounts_list() -> list:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, name, phone, card_id, external_id, "
+        "CASE WHEN refresh_token IS NOT NULL AND refresh_token != '' THEN 1 ELSE 0 END AS has_token, "
+        "created_at FROM accounts ORDER BY id"
+    )
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+
+def account_get(account_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM accounts WHERE id=?', (int(account_id),))
+    row = cur.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def account_add(name: str = '', phone: str = '', card_id: str = '',
+                external_id: str = '', refresh_token: str = '', token: str = '') -> int:
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        'INSERT INTO accounts (name, phone, card_id, external_id, refresh_token, token) '
+        'VALUES (?,?,?,?,?,?)',
+        (name or 'Новый аккаунт', phone, card_id, external_id, refresh_token, token),
+    )
+    aid = cur.lastrowid
+    conn.commit()
+    conn.close()
+    if refresh_token or token:
+        apply_account_tokens(aid, refresh_token=refresh_token, token=token, external_id=external_id)
+    return aid
+
+
+def apply_account_tokens(account_id, refresh_token: str = '', token: str = '',
+                         external_id: str = '') -> None:
+    aid = int(account_id)
+    if refresh_token:
+        _set_meta(aid, 'refresh_token', refresh_token)
+    if token:
+        _set_meta(aid, 'token', token)
+    ext = (external_id or _jwt_claim_safe(token, 'external_id')
+           or _jwt_claim_safe(refresh_token, 'external_id'))
+    if ext:
+        _set_meta(aid, 'external_id', ext)
+    _account_touch(
+        aid,
+        refresh_token=refresh_token or None,
+        token=token or None,
+        external_id=ext or None,
+    )
+
+
+def account_activate(account_id) -> None:
+    set_active_account_id(int(account_id))
+
+
+def account_refresh_info(account_id) -> dict:
+    aid = int(account_id)
+    token = get_token(force=True, account_id=aid)
+    user = _api_get('/api/v2/users/?consumer=mobile', token).get('user') or {}
+    name = ' '.join(x for x in (user.get('first_name'), user.get('last_name')) if x)
+    phone = user.get('phone', '')
+    _account_touch(aid, name=name or None, phone=phone or None,
+                   card_id=_card_id_from_phone(phone) or None)
+    _set_meta(aid, 'name', name)
+    _set_meta(aid, 'phone', phone)
+    return {'name': name, 'phone': phone}
+
+
+def _account_id_by_external_id(external_id):
+    if not external_id:
+        return None
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT id FROM accounts WHERE external_id=? LIMIT 1', (external_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row['id'] if row else None
+
+
+def account_add_from_device() -> int:
+    """Добавить/обновить аккаунт из prefs приложения на эмуляторе (ADB)."""
+    data = parse_prefs(pull_prefs())
+    token = data['token']
+    refresh = _field(data['raw'], 'flutter.refreshToken')
+    ext = _jwt_claim_safe(token, 'external_id') or _jwt_claim_safe(refresh, 'external_id')
+    user = data.get('user') or {}
+    name = ' '.join(x for x in (user.get('first_name'), user.get('last_name')) if x)
+    phone = user.get('phone', '')
+    aid = _account_id_by_external_id(ext)
+    if aid:
+        apply_account_tokens(aid, refresh_token=refresh, token=token, external_id=ext)
+        _account_touch(aid, name=name or None, phone=phone or None,
+                       card_id=_card_id_from_phone(phone) or None)
+        return aid
+    return account_add(name=name, phone=phone, card_id=_card_id_from_phone(phone),
+                       external_id=ext, refresh_token=refresh, token=token)
+
+
+def account_delete(account_id) -> bool:
+    aid = int(account_id)
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT COUNT(*) AS n FROM accounts')
+    if (cur.fetchone()['n'] or 0) <= 1:
+        conn.close()
+        return False
+    for table in ('bristol_meta', 'bristol_coupons', 'coupon_grants'):
+        cur.execute(f'DELETE FROM {table} WHERE account_id=?', (aid,))
+    cur.execute('DELETE FROM sessions WHERE account_id=?', (aid,))
+    cur.execute('DELETE FROM accounts WHERE id=?', (aid,))
+    conn.commit()
+    conn.close()
+    if get_active_account_id() == aid:
+        rest = accounts_list()
+        if rest:
+            set_active_account_id(rest[0]['id'])
+    return True
+
 
 try:
     from PIL import Image, ImageOps
@@ -439,72 +626,40 @@ def _jwt_claim_safe(tok: str, claim: str) -> str:
         return ''
 
 
-def ensure_tokens_from_env() -> bool:
+def ensure_tokens_from_env(account_id: int = 1) -> bool:
     """Подтянуть токены Бристоля из переменных окружения (если заданы).
 
     Позволяет работать автономно (Railway/Prod) без ADB и эмулятора:
-    достаточно BRISTOL_REFRESH_TOKEN.
+    достаточно BRISTOL_REFRESH_TOKEN. Пишет в аккаунт account_id (по умолчанию 1).
     """
     env_refresh = (os.environ.get('BRISTOL_REFRESH_TOKEN') or '').strip()
     env_token = (os.environ.get('BRISTOL_TOKEN') or '').strip()
     env_ext = (os.environ.get('BRISTOL_EXTERNAL_ID') or '').strip()
     if not (env_refresh or env_token):
         return False
-    values = {}
-    if env_token:
-        values['token'] = env_token
-    if env_refresh:
-        values['refresh_token'] = env_refresh
-    ext = env_ext
-    if not ext:
-        ext = _jwt_claim_safe(env_token, 'external_id') or _jwt_claim_safe(env_refresh, 'external_id')
-    if ext:
-        values['external_id'] = ext
-    conn = get_conn()
-    cur = conn.cursor()
-    for k, v in values.items():
-        cur.execute(
-            'INSERT INTO bristol_meta (key, value) VALUES (?,?) '
-            'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-            (k, json.dumps(v, ensure_ascii=False)),
-        )
-    conn.commit()
-    conn.close()
+    ext = env_ext or _jwt_claim_safe(env_token, 'external_id') or _jwt_claim_safe(env_refresh, 'external_id')
+    apply_account_tokens(account_id, refresh_token=env_refresh, token=env_token, external_id=ext)
     return True
 
 
-def _load_tokens() -> dict:
-    conn = get_conn()
-    cur = conn.cursor()
+def _load_tokens(account_id=None) -> dict:
+    aid = _aid(account_id)
     out = {}
     for key in ('token', 'refresh_token', 'external_id'):
-        cur.execute('SELECT value FROM bristol_meta WHERE key=?', (key,))
-        row = cur.fetchone()
-        if row:
-            try:
-                out[key] = json.loads(row['value'])
-            except Exception:
-                out[key] = row['value']
-    conn.close()
+        v = _get_meta(aid, key)
+        if v is not None:
+            out[key] = v
     return out
 
 
-def _save_tokens(token: str, refresh: str) -> None:
-    conn = get_conn()
-    cur = conn.cursor()
-    values = {
-        'token': token,
-        'refresh_token': refresh,
-        'external_id': _jwt_claims(token).get('external_id', ''),
-    }
-    for k, v in values.items():
-        cur.execute(
-            'INSERT INTO bristol_meta (key, value) VALUES (?,?) '
-            'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-            (k, json.dumps(v, ensure_ascii=False)),
-        )
-    conn.commit()
-    conn.close()
+def _save_tokens(token: str, refresh: str, account_id=None) -> None:
+    aid = _aid(account_id)
+    ext = _jwt_claims(token).get('external_id', '')
+    _set_meta(aid, 'token', token)
+    _set_meta(aid, 'refresh_token', refresh)
+    _set_meta(aid, 'external_id', ext)
+    _account_touch(aid, token=token, refresh_token=refresh, external_id=ext or None)
+
 
 
 def _http(method: str, path: str, headers: dict, body: bytes | None = None, timeout: int = 20):
@@ -516,8 +671,8 @@ def _http(method: str, path: str, headers: dict, body: bytes | None = None, time
     return resp.status, raw
 
 
-def _do_refresh(refresh: str) -> dict:
-    ext = _jwt_claim_safe(refresh, 'external_id') or _load_tokens().get('external_id', '')
+def _do_refresh(refresh: str, account_id=None) -> dict:
+    ext = _jwt_claim_safe(refresh, 'external_id') or _load_tokens(account_id).get('external_id', '')
     headers = {
         'Accept': 'application/json',
         'User-Agent': HEADERS_UA,
@@ -529,45 +684,46 @@ def _do_refresh(refresh: str) -> dict:
     return json.loads(raw.decode('utf-8', 'ignore'))
 
 
-def refresh_token() -> str:
-    tokens = _load_tokens()
+def refresh_token(account_id=None) -> str:
+    tokens = _load_tokens(account_id)
     refresh = tokens.get('refresh_token')
     if not refresh:
         raise BristolError('Нет refresh-токена Бристоля.')
-    data = _do_refresh(refresh)
+    data = _do_refresh(refresh, account_id)
     new_access = data.get('access_token')
     if not new_access:
         raise BristolError('Бристоль не вернул access_token.')
-    _save_tokens(new_access, data.get('refresh_token') or refresh)
+    _save_tokens(new_access, data.get('refresh_token') or refresh, account_id)
     return new_access
 
 
-def seed_from_app() -> str:
+def seed_from_app(account_id=None) -> str:
     data = parse_prefs(pull_prefs())
-    _save_tokens(data['token'], _field(data['raw'], 'flutter.refreshToken'))
+    _save_tokens(data['token'], _field(data['raw'], 'flutter.refreshToken'), account_id)
     return data['token']
 
 
-def get_token(force: bool = False) -> str:
-    tokens = _load_tokens()
+def get_token(force: bool = False, account_id=None) -> str:
+    tokens = _load_tokens(account_id)
     token = tokens.get('token', '')
     if token and not force and not _token_expired(token):
         return token
     if tokens.get('refresh_token'):
         try:
-            return refresh_token()
+            return refresh_token(account_id)
         except BristolError:
             pass
     # ADB-посев доступен только локально; в проде (Railway) его нет — работаем по токенам.
-    if _adb_available():
+    if account_id is None and _adb_available():
         try:
-            return seed_from_app()
+            return seed_from_app(account_id)
         except BristolError:
             pass
     raise BristolError(
         'Нет токена Бристоля. Укажите BRISTOL_REFRESH_TOKEN в переменных окружения '
         'или синхронизируйте локально (откройте приложение Бристоль).'
     )
+
 
 
 def _api_get(path: str, token: str | None = None, timeout: int = 20, _retry: bool = True) -> dict:
@@ -694,8 +850,9 @@ def _ocr_coupon_meta(coupons: list, local_images: dict) -> dict:
     return out
 
 
-def sync() -> dict:
-    token = get_token()
+def sync(account_id=None) -> dict:
+    aid = _aid(account_id)
+    token = get_token(account_id=aid)
     coupons = fetch_coupons(token).get('coupons') or []
     user = _api_get('/api/v2/users/?consumer=mobile', token).get('user') or {}
     try:
@@ -711,7 +868,7 @@ def sync() -> dict:
 
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('DELETE FROM bristol_coupons')
+    cur.execute('DELETE FROM bristol_coupons WHERE account_id=?', (aid,))
     local_images = _cache_coupon_images(coupons, token)
     ocr_meta = _ocr_coupon_meta(coupons, local_images)
     for c in coupons:
@@ -719,9 +876,9 @@ def sync() -> dict:
         discount, title = ocr_meta.get(num, (None, None))
         cur.execute(
             '''INSERT INTO bristol_coupons
-               (number, universal_coupon, coupon_type, image_url, actual_start, actual_end, discount, title, synced_at)
-               VALUES (?,?,?,?,?,?,?,?,?)
-               ON CONFLICT(number) DO UPDATE SET
+               (account_id, number, universal_coupon, coupon_type, image_url, actual_start, actual_end, discount, title, synced_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(account_id, number) DO UPDATE SET
                  universal_coupon=excluded.universal_coupon,
                  coupon_type=excluded.coupon_type,
                  image_url=excluded.image_url,
@@ -731,6 +888,7 @@ def sync() -> dict:
                  title=COALESCE(excluded.title, bristol_coupons.title),
                  synced_at=excluded.synced_at''',
             (
+                aid,
                 num,
                 c.get('universal_coupon'),
                 c.get('coupon_type'),
@@ -742,6 +900,8 @@ def sync() -> dict:
                 now,
             ),
         )
+    conn.commit()
+    conn.close()
     meta = {
         'phone': user.get('phone', ''),
         'name': ' '.join(x for x in (user.get('first_name'), user.get('last_name')) if x),
@@ -753,20 +913,21 @@ def sync() -> dict:
         'card_schedule': schedule,
     }
     for k, v in meta.items():
-        cur.execute(
-            'INSERT INTO bristol_meta (key, value) VALUES (?,?) '
-            'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-            (k, json.dumps(v, ensure_ascii=False)),
-        )
-    conn.commit()
-    conn.close()
+        _set_meta(aid, k, v)
+    _account_touch(
+        aid,
+        name=meta['name'] or None,
+        phone=meta['phone'] or None,
+        card_id=_card_id_from_phone(meta['phone']) or None,
+    )
     return meta
 
 
-def get_meta() -> dict:
+def get_meta(account_id=None) -> dict:
+    aid = _aid(account_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT key, value FROM bristol_meta')
+    cur.execute('SELECT key, value FROM bristol_meta WHERE account_id=?', (aid,))
     out = {}
     for r in cur.fetchall():
         try:
@@ -777,35 +938,39 @@ def get_meta() -> dict:
     return out
 
 
-def get_stored_coupons() -> list:
+def get_stored_coupons(account_id=None) -> list:
+    aid = _aid(account_id)
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
         'SELECT number, universal_coupon, coupon_type, image_url, actual_start, actual_end, discount, title '
-        'FROM bristol_coupons ORDER BY (discount IS NULL), discount DESC, actual_start DESC'
+        'FROM bristol_coupons WHERE account_id=? '
+        'ORDER BY (discount IS NULL), discount DESC, actual_start DESC',
+        (aid,),
     )
     rows = [dict(r) for r in cur.fetchall()]
     conn.close()
     return rows
 
 
-def get_coupon(number: str):
+def get_coupon(number: str, account_id=None):
+    aid = _aid(account_id)
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
         'SELECT number, universal_coupon, coupon_type, image_url, actual_start, actual_end, discount, title '
-        'FROM bristol_coupons WHERE number=?',
-        (number,),
+        'FROM bristol_coupons WHERE account_id=? AND number=?',
+        (aid, number),
     )
     row = cur.fetchone()
     conn.close()
     return dict(row) if row else None
 
 
-def available_bristol_coupons() -> list:
+def available_bristol_coupons(account_id=None) -> list:
     now = datetime.now(timezone.utc)
     out = []
-    for c in get_stored_coupons():
+    for c in get_stored_coupons(account_id):
         end = c.get('actual_end')
         if end:
             try:
@@ -817,8 +982,9 @@ def available_bristol_coupons() -> list:
     return out
 
 
-def get_card_qr() -> str:
-    meta = get_meta()
+def get_card_qr(account_id=None) -> str:
+    aid = _aid(account_id)
+    meta = get_meta(aid)
     schedule = meta.get('card_schedule')
     if schedule:
         try:
@@ -828,10 +994,13 @@ def get_card_qr() -> str:
     data = meta.get('card_qr') or ''
     if data:
         return data
-    try:
-        return current_qr(parse_prefs()['qrs'])
-    except BristolError:
-        return ''
+    if aid == get_active_account_id():
+        try:
+            return current_qr(parse_prefs()['qrs'])
+        except BristolError:
+            return ''
+    return ''
+
 
 
 def _card_ts(code: str) -> str:
@@ -847,13 +1016,15 @@ def wrap_card_payload(code: str) -> str:
     return '[B+]' + base64.b64encode(inner.encode('utf-8')).decode('ascii')
 
 
-def get_card_payload() -> str:
-    return wrap_card_payload(get_card_qr())
+def get_card_payload(account_id=None) -> str:
+    return wrap_card_payload(get_card_qr(account_id))
 
 
-def sync_card_codes() -> dict:
+def sync_card_codes(account_id=None) -> dict:
     """Перегенерировать расписание кодов карты с сервера и сохранить."""
-    d = generate_card_codes()
+    aid = _aid(account_id)
+    token = get_token(account_id=aid)
+    d = generate_card_codes(token)
     codes = d.get('discount_card_codes') or []
     schedule = [{'time': c.get('time'), 'data': c.get('data')} for c in codes if c.get('data')]
     card_qr = ''
@@ -861,22 +1032,14 @@ def sync_card_codes() -> dict:
         card_qr = current_qr(schedule)
     except BristolError:
         pass
-    conn = get_conn()
-    cur = conn.cursor()
-    for k, v in [('card_schedule', schedule), ('card_qr', card_qr)]:
-        cur.execute(
-            'INSERT INTO bristol_meta (key,value) VALUES (?,?) '
-            'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-            (k, json.dumps(v, ensure_ascii=False)),
-        )
-    conn.commit()
-    conn.close()
+    _set_meta(aid, 'card_schedule', schedule)
+    _set_meta(aid, 'card_qr', card_qr)
     return {'codes': len(schedule), 'card_qr': card_qr}
 
 
-def qr_png_response():
+def qr_png_response(account_id=None):
     from datamatrix import make_dm_png
-    data = get_card_payload()
+    data = get_card_payload(account_id)
     if not data:
         raise BristolError('Код карты не получен. Нажмите «Синхронизировать».')
     return make_dm_png(data, box_size=5, border=4)

@@ -31,6 +31,20 @@
   </div>
 </div>
 
+{# ---------- ПЕРЕКЛЮЧАТЕЛЬ АККАУНТОВ ---------- #}
+<div class='card' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap'>
+  <span class='small muted'>Аккаунт:</span>
+  {% for a in accounts %}
+  <form method='post' action='/accounts/{{a.id}}/activate' style='display:inline'>
+    <button class='btn sm {% if a.id==active_account_id %}dark{% else %}ghost{% endif %}' type='submit' {% if a.id==active_account_id %}disabled{% endif %}>
+      {{ a.name or a.phone or ('Аккаунт ' ~ a.id) }}{% if not a.has_token %} · нет токена{% endif %}
+    </button>
+  </form>
+  {% endfor %}
+  <span style='flex:1'></span>
+  <button class='btn sm ghost' type='button' onclick="document.querySelector(&quot;[data-tab='settings']&quot;).click()">Управление аккаунтами</button>
+</div>
+
 <div id='live-error'></div>
 
 {# ---------- ВКЛАДКИ ---------- #}
@@ -243,6 +257,51 @@
 
 {# ================= НАСТРОЙКИ ================= #}
 <div class='panel' id='panel-settings'>
+  <div class='card' style='max-width:640px'>
+    <div class='sectionhead'><h2>Аккаунты</h2><span class='count'>{{ accounts|length }}</span></div>
+    <div class='list'>
+      {% for a in accounts %}
+      <div class='item'>
+        <div class='grow'>
+          <div class='ttl'>{{ a.name or ('Аккаунт ' ~ a.id) }}
+            {% if a.id==active_account_id %}<span class='badge ok'>активен</span>{% endif %}
+          </div>
+          <div class='cap'>{{ a.phone or '—' }}{% if a.card_id %} · карта {{ a.card_id }}{% endif %}
+            {% if not a.has_token %} · <span class='badge bad'>нет токена</span>{% endif %}
+          </div>
+        </div>
+        <div class='actions'>
+          {% if a.id != active_account_id %}
+          <form method='post' action='/accounts/{{a.id}}/activate' style='display:inline'><button class='btn sm ghost' type='submit'>Переключить</button></form>
+          {% endif %}
+          <form method='post' action='/accounts/{{a.id}}/refresh' style='display:inline'><button class='btn sm ghost' type='submit'>Обновить данные</button></form>
+          {% if accounts|length > 1 %}
+          <form method='post' action='/accounts/{{a.id}}/delete' style='display:inline' onsubmit='return confirm("Удалить аккаунт и его данные?")'><button class='btn sm danger' type='submit'>Удалить</button></form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class='card mt2' style='max-width:640px'>
+    <div class='sectionhead'><h2>Добавить аккаунт</h2></div>
+    <form method='post' action='/accounts/add'>
+      <div class='field mb'><label>Refresh-токен (обязательно)</label><textarea name='refresh_token' rows='3' placeholder='eyJ…' required></textarea></div>
+      <div class='row'>
+        <div class='field'><label>Имя (необязательно)</label><input name='name'></div>
+        <div class='field'><label>Телефон (необязательно)</label><input name='phone' placeholder='+7…'></div>
+      </div>
+      <button class='btn' type='submit'>Добавить аккаунт</button>
+    </form>
+    <div class='row mt2' style='align-items:center'>
+      <form method='post' action='/accounts/from-device' style='display:inline' onsubmit="return confirm('Взять аккаунт из приложения на эмуляторе?')">
+        <button class='btn ghost' type='submit'>Добавить из эмулятора (ADB)</button>
+      </form>
+      <span class='small muted'>Локально берёт аккаунт, залогиненный в приложении на эмуляторе.</span>
+    </div>
+  </div>
+
   <div class='card' style='max-width:520px'>
     <div class='sectionhead'><h2>Пароль администратора</h2></div>
     <form method='post' action='/admin/password'>
@@ -444,5 +503,7 @@ poll();
 
 {% if perr %}{% if perr=='1' %}toast('Неверный текущий пароль', false);{% elif perr=='2' %}toast('Пароль слишком короткий', false);{% endif %}{% endif %}
 {% if pok %}toast('Пароль изменён');{% endif %}
+{% if aerr %}toast('Не удалось добавить аккаунт', false);{% endif %}
+{% if aok %}toast('Аккаунт добавлен');{% endif %}
 </script>
 {% endblock %}

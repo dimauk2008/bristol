@@ -18,7 +18,7 @@ from starlette.concurrency import run_in_threadpool
 from pathlib import Path
 
 import qrcode
-from db import init_db, get_conn, get_setting, set_setting
+from db import init_db, get_conn, get_setting, set_setting, get_active_account_id
 from qr import make_qr_png
 from datamatrix import make_dm_png
 import bristol
@@ -63,9 +63,9 @@ def _seed_coupons_from_json() -> int:
         if not num:
             continue
         cur.execute(
-            'INSERT INTO bristol_coupons (number, universal_coupon, coupon_type, image_url, '
-            'actual_start, actual_end, discount, title) VALUES (?,?,?,?,?,?,?,?) '
-            'ON CONFLICT(number) DO UPDATE SET '
+            'INSERT INTO bristol_coupons (account_id, number, universal_coupon, coupon_type, image_url, '
+            'actual_start, actual_end, discount, title) VALUES (1,?,?,?,?,?,?,?,?) '
+            'ON CONFLICT(account_id, number) DO UPDATE SET '
             'title=COALESCE(bristol_coupons.title, excluded.title), '
             'discount=COALESCE(bristol_coupons.discount, excluded.discount)',
             (
@@ -85,10 +85,11 @@ except Exception:
     pass
 
 
-def _card_schedule_exists() -> bool:
+def _card_schedule_exists(account_id=None) -> bool:
+    aid = account_id if account_id is not None else get_active_account_id()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT value FROM bristol_meta WHERE key='card_schedule'")
+    cur.execute("SELECT value FROM bristol_meta WHERE account_id=? AND key='card_schedule'", (aid,))
     row = cur.fetchone()
     conn.close()
     if not row or not row['value']:
@@ -204,7 +205,7 @@ async def change_password(current: str = Form(...), new: str = Form(...)):
 def _load_session(session_id: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT id, name, active, expires_at, created_at FROM sessions WHERE id=?', (session_id,))
+    cur.execute('SELECT id, name, active, expires_at, created_at, account_id FROM sessions WHERE id=?', (session_id,))
     row = cur.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -241,7 +242,7 @@ def _expired_page(request: Request, session_id: str):
 def _load_grant(token: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT token, number, active, expires_at, created_at FROM coupon_grants WHERE token=?', (token,))
+    cur.execute('SELECT token, number, active, expires_at, created_at, account_id FROM coupon_grants WHERE token=?', (token,))
     row = cur.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -260,10 +261,12 @@ def _grant_valid(g: dict | None) -> bool:
     return True
 
 
-def _active_grants():
+def _active_grants(account_id=None):
+    aid = account_id if account_id is not None else get_active_account_id()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT token, number, active, expires_at, created_at FROM coupon_grants ORDER BY created_at DESC')
+    cur.execute('SELECT token, number, active, expires_at, created_at, account_id FROM coupon_grants '
+                'WHERE account_id=? ORDER BY created_at DESC', (aid,))
     out = []
     for r in cur.fetchall():
         g = dict(r)
@@ -278,9 +281,11 @@ def _active_grants():
 
 @app.get('/', response_class=HTMLResponse)
 async def index(request: Request):
+    aid = get_active_account_id()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT id, name, active, expires_at, created_at FROM sessions ORDER BY created_at DESC')
+    cur.execute('SELECT id, name, active, expires_at, created_at, account_id FROM sessions '
+                'WHERE account_id=? ORDER BY created_at DESC', (aid,))
     sessions = [dict(r) for r in cur.fetchall()]
     for s in sessions:
         s['remaining'] = _remaining(s.get('expires_at'))
@@ -288,27 +293,32 @@ async def index(request: Request):
     coupons = [dict(r) for r in cur.fetchall()]
     conn.close()
     try:
-        bristol_meta = bristol.get_meta()
+        bristol_meta = bristol.get_meta(aid)
     except Exception:
         bristol_meta = {}
-    bristol_coupons = bristol.get_stored_coupons()
+    bristol_coupons = bristol.get_stored_coupons(aid)
     return templates.TemplateResponse(request, 'index.html', {
         'sessions': sessions,
         'coupons': coupons,
         'bristol_meta': bristol_meta,
         'bristol_coupons': bristol_coupons,
-        'grants': _active_grants(),
+        'grants': _active_grants(aid),
+        'accounts': bristol.accounts_list(),
+        'active_account_id': aid,
         'durations': DURATION_LABELS,
         'perr': request.query_params.get('perr'),
         'pok': request.query_params.get('pok'),
+        'aerr': request.query_params.get('aerr'),
+        'aok': request.query_params.get('aok'),
     })
 
 
 @app.get('/api/admin/data')
 async def api_admin_data():
+    aid = get_active_account_id()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT id, name, active, expires_at FROM sessions ORDER BY created_at DESC')
+    cur.execute('SELECT id, name, active, expires_at FROM sessions WHERE account_id=? ORDER BY created_at DESC', (aid,))
     sessions = []
     for r in cur.fetchall():
         s = dict(r)
@@ -316,17 +326,18 @@ async def api_admin_data():
         sessions.append(s)
     cur.execute('SELECT count(*) c FROM coupons')
     manual = cur.fetchone()['c']
-    cur.execute('SELECT count(*) c FROM bristol_coupons')
+    cur.execute('SELECT count(*) c FROM bristol_coupons WHERE account_id=?', (aid,))
     bcount = cur.fetchone()['c']
     conn.close()
-    meta = bristol.get_meta()
+    meta = bristol.get_meta(aid)
     safe = {k: meta.get(k) for k in ('balance', 'coupon_count', 'phone', 'name', 'loyalty_status', 'synced_at')}
     return JSONResponse({
         'meta': safe,
         'sessions': sessions,
-        'grants': _active_grants(),
+        'grants': _active_grants(aid),
         'counts': {'bristol': bcount, 'manual': manual},
         'last_error': meta.get('last_error'),
+        'active_account_id': aid,
     })
 
 
@@ -337,8 +348,9 @@ async def api_admin_coupons():
 
 @app.post('/bristol/sync')
 async def bristol_sync():
+    aid = get_active_account_id()
     try:
-        await run_in_threadpool(bristol.sync)
+        await run_in_threadpool(bristol.sync, aid)
         msg = ''
     except BristolError as e:
         msg = str(e)
@@ -348,12 +360,12 @@ async def bristol_sync():
     cur = conn.cursor()
     if msg:
         cur.execute(
-            'INSERT INTO bristol_meta (key, value) VALUES (?,?) '
-            'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-            ('last_error', json.dumps(msg, ensure_ascii=False)),
+            'INSERT INTO bristol_meta (account_id, key, value) VALUES (?,?,?) '
+            'ON CONFLICT(account_id, key) DO UPDATE SET value=excluded.value',
+            (aid, 'last_error', json.dumps(msg, ensure_ascii=False)),
         )
     else:
-        cur.execute("DELETE FROM bristol_meta WHERE key='last_error'")
+        cur.execute("DELETE FROM bristol_meta WHERE account_id=? AND key='last_error'", (aid,))
     conn.commit()
     conn.close()
     return RedirectResponse(url='/', status_code=status.HTTP_303_SEE_OTHER)
@@ -367,6 +379,55 @@ async def bristol_qr():
         raise HTTPException(status_code=404, detail=str(e))
 
 
+# ---------- аккаунты ----------
+
+@app.post('/accounts/add')
+async def account_add_route(refresh_token: str = Form(''), name: str = Form(''),
+                            phone: str = Form(''), token: str = Form('')):
+    rt = refresh_token.strip()
+    tk = token.strip()
+    if not rt and not tk:
+        return RedirectResponse('/?aerr=1', status_code=status.HTTP_303_SEE_OTHER)
+    aid = bristol.account_add(name=name.strip(), phone=phone.strip(),
+                              refresh_token=rt, token=tk)
+    try:
+        bristol.account_refresh_info(aid)
+    except Exception:
+        pass
+    return RedirectResponse('/?aok=1', status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post('/accounts/from-device')
+async def account_from_device_route():
+    try:
+        await run_in_threadpool(bristol.account_add_from_device)
+    except Exception:
+        return RedirectResponse('/?aerr=1', status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse('/?aok=1', status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post('/accounts/{account_id}/activate')
+async def account_activate_route(account_id: int):
+    if bristol.account_get(account_id):
+        bristol.account_activate(account_id)
+    return RedirectResponse('/', status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post('/accounts/{account_id}/refresh')
+async def account_refresh_route(account_id: int):
+    try:
+        bristol.account_refresh_info(account_id)
+    except Exception:
+        pass
+    return RedirectResponse('/', status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post('/accounts/{account_id}/delete')
+async def account_delete_route(account_id: int):
+    bristol.account_delete(account_id)
+    return RedirectResponse('/', status_code=status.HTTP_303_SEE_OTHER)
+
+
 @app.post('/sessions/create')
 async def create_session(name: str = Form(...), duration: str = Form('none')):
     minutes = DURATIONS.get(duration, 0)
@@ -374,9 +435,11 @@ async def create_session(name: str = Form(...), duration: str = Form('none')):
     if minutes:
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat()
     sid = str(uuid.uuid4())
+    aid = get_active_account_id()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('INSERT INTO sessions (id,name,active,expires_at) VALUES (?,?,1,?)', (sid, name, expires_at))
+    cur.execute('INSERT INTO sessions (id,name,active,expires_at,account_id) VALUES (?,?,1,?,?)',
+                (sid, name, expires_at, aid))
     conn.commit()
     conn.close()
     return RedirectResponse(url='/', status_code=status.HTTP_303_SEE_OTHER)
@@ -517,15 +580,16 @@ async def create_grant(request: Request):
     body = await request.json()
     number = (body.get('number') or '').strip()
     duration = body.get('duration') or 'none'
-    if not number or not bristol.get_coupon(number):
+    aid = get_active_account_id()
+    if not number or not bristol.get_coupon(number, aid):
         return JSONResponse({'error': 'Купон не найден'}, status_code=404)
     minutes = DURATIONS.get(duration, 0)
     expires_at = (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat() if minutes else None
     token = secrets.token_urlsafe(16)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('INSERT INTO coupon_grants (token, number, active, expires_at) VALUES (?,?,1,?)',
-                (token, number, expires_at))
+    cur.execute('INSERT INTO coupon_grants (token, number, active, expires_at, account_id) VALUES (?,?,1,?,?)',
+                (token, number, expires_at, aid))
     conn.commit()
     conn.close()
     return JSONResponse({'token': token, 'number': number, 'url': f'/g/{token}', 'expires_at': expires_at})
@@ -549,7 +613,7 @@ async def public_grant(request: Request, token: str):
     if not _grant_valid(g):
         return templates.TemplateResponse(request, 'session_expired.html', {'session_id': ''},
                                           status_code=status.HTTP_410_GONE)
-    c = bristol.get_coupon(g['number'])
+    c = bristol.get_coupon(g['number'], g.get('account_id'))
     if not c:
         raise HTTPException(status_code=404, detail='Coupon not found')
     return templates.TemplateResponse(request, 'coupon_grant.html', {
@@ -564,7 +628,7 @@ async def public_grant_qr(token: str):
     g = _load_grant(token)
     if not g or not _grant_valid(g):
         raise HTTPException(status_code=404)
-    if not bristol.get_coupon(g['number']):
+    if not bristol.get_coupon(g['number'], g.get('account_id')):
         raise HTTPException(status_code=404, detail='Coupon not found')
     return make_dm_png(g['number'], box_size=8, border=4)
 
@@ -578,12 +642,13 @@ async def public_card(request: Request, session_id: str):
         raise HTTPException(status_code=404)
     if not _session_valid(s):
         return _expired_page(request, session_id)
-    card_data = bristol.get_card_qr()
+    aid = s.get('account_id')
+    card_data = bristol.get_card_qr(aid)
     return templates.TemplateResponse(request, 'card-ses.html', {
         'session': s,
         'card_data': card_data,
         'remaining': _remaining(s.get('expires_at')),
-        'bristol_meta': bristol.get_meta(),
+        'bristol_meta': bristol.get_meta(aid),
     })
 
 
@@ -592,12 +657,13 @@ async def public_card_qr(session_id: str, refresh: bool = False):
     s = _load_session(session_id)
     if not s or not _session_valid(s):
         raise HTTPException(status_code=404)
-    if refresh or not _card_schedule_exists():
+    aid = s.get('account_id')
+    if refresh or not _card_schedule_exists(aid):
         try:
-            await run_in_threadpool(bristol.sync_card_codes)
+            await run_in_threadpool(bristol.sync_card_codes, aid)
         except Exception:
             pass
-    qr_data = bristol.get_card_payload()
+    qr_data = bristol.get_card_payload(aid)
     if not qr_data:
         raise HTTPException(status_code=404, detail='QR data is empty')
     return make_dm_png(qr_data, box_size=5, border=4)
@@ -616,7 +682,7 @@ async def public_coupons(request: Request, session_id: str):
     coupons = [dict(r) for r in cur.fetchall()]
     conn.close()
     try:
-        bristol_coupons = bristol.available_bristol_coupons()
+        bristol_coupons = bristol.available_bristol_coupons(s.get('account_id'))
     except Exception:
         bristol_coupons = []
     return templates.TemplateResponse(request, 'coupons_public.html', {
@@ -634,7 +700,7 @@ async def public_bristol_coupon(request: Request, session_id: str, number: str):
         raise HTTPException(status_code=404)
     if not _session_valid(s):
         return _expired_page(request, session_id)
-    c = bristol.get_coupon(number)
+    c = bristol.get_coupon(number, s.get('account_id'))
     if not c:
         raise HTTPException(status_code=404, detail='Coupon not found')
     return templates.TemplateResponse(request, 'bristol_coupon.html', {
@@ -649,7 +715,7 @@ async def public_bristol_coupon_qr(session_id: str, number: str):
     s = _load_session(session_id)
     if not s or not _session_valid(s):
         raise HTTPException(status_code=404)
-    if not bristol.get_coupon(number):
+    if not bristol.get_coupon(number, s.get('account_id')):
         raise HTTPException(status_code=404, detail='Coupon not found')
     return make_dm_png(number, box_size=8, border=4)
 

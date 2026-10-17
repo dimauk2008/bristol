@@ -14,9 +14,13 @@ coupons.db-*
 cookies.json
 bristol_prefs.xml
 capture/flutter_prefs.xml
+capture/account*_prefs.xml
 capture/credentials.json
 capture/hive.hive
 .env
+
+# --- временные тестовые БД ---
+capture/_*.sqlite
 
 # --- Крупные бинарники и артефакты ---
 capture/bristol.apk
