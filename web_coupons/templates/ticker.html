@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Тикер купонов{% endblock %}
+{% block body %}
+<div class='header'>
+  <div class='inner'>
+    <a class='brand' href='/' style='text-decoration:none'>
+      <span class='logo'>B</span>
+      <span>Bristol<small>Тикер купонов</small></span>
+    </a>
+    <span class='spacer'></span>
+    <span class='live'><span class='pulse'></span>в реальном времени</span>
+    <a class='btn ghost sm' href='/'>← Админка</a>
+  </div>
+</div>
+<div class='tk'><div class='tk-track' id='track'></div></div>
+<div class='tk-empty' id='empty'>Загрузка купонов…</div>
+<style>
+  body{background:#0e0f13;overflow:hidden}
+  .tk{position:fixed;left:0;right:0;top:50%;transform:translateY(-50%);overflow:hidden;padding:16px 0}
+  .tk-track{display:flex;gap:22px;will-change:transform}
+  .tk-item{flex:none;height:min(46vh,320px);border-radius:18px;overflow:hidden;background:#1a1c22;box-shadow:0 24px 60px -24px rgba(0,0,0,.9)}
+  .tk-item img{height:100%;width:auto;display:block}
+  .tk-empty{position:fixed;inset:0;display:grid;place-items:center;color:#6b7280;font-size:16px;pointer-events:none;transition:opacity .4s}
+  .tk-empty.hide{opacity:0}
+</style>
+{% endblock %}
+{% block head %}
+<script>
+(function(){
+  var track=document.getElementById('track');
+  var empty=document.getElementById('empty');
+  var shown={};
+  var offset=0;
+  var SPEED=0.8;
+  var GAP=22;
+
+  function addItem(c){
+    if(!c || !c.number || shown[c.number]) return;
+    shown[c.number]=1;
+    var d=document.createElement('div');
+    d.className='tk-item';
+    var img=document.createElement('img');
+    img.src=c.image_url||'';
+    img.alt=c.number;
+    img.title=(c.title||c.number)+(c.discount?'  ·  -'+c.discount+'%':'');
+    img.onerror=function(){ this.style.visibility='hidden'; };
+    d.appendChild(img);
+    track.appendChild(d);
+    empty.classList.add('hide');
+  }
+
+  function tick(){
+    if(track.firstElementChild){
+      offset-=SPEED;
+      var first=track.firstElementChild;
+      if((first.offsetWidth+GAP)+offset<=0){
+        offset+=first.offsetWidth+GAP;
+        track.appendChild(first);
+      }
+      track.style.transform='translateX('+offset+'px)';
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function poll(){
+    fetch('/api/admin/coupons').then(function(r){
+      if(!r.ok) throw 0;
+      return r.json();
+    }).then(function(d){
+      (d.coupons||[]).forEach(addItem);
+    }).catch(function(){ empty.textContent='Нет доступа — войдите в админку'; });
+  }
+  poll();
+  setInterval(poll, 5000);
+})();
+</script>
+{% endblock %}

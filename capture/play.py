@@ -124,9 +124,14 @@ def play_one(token: str, dry: bool = False, use_booster: bool = True,
     booster_left = session.get("booster_remaining", 0)
     promo = promo_list[0] if promo_list else None
 
+    if attempt_type == "paid":
+        available_for_booster = (balance_before or 0) - attempt_price
+    else:
+        available_for_booster = balance_before or 0
+    can_afford_booster = available_for_booster >= booster_price
     target, use_booster, booster_at = plan_target(
         losses, session.get("max_taps", 120),
-        booster_available=use_booster and booster_left > 0,
+        booster_available=use_booster and booster_left > 0 and can_afford_booster,
         gift=gift, score=score_fn, promo=promo,
         booster_price=booster_price, gift_min=gift_min,
     )

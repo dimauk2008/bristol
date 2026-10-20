@@ -1,525 +1,374 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#E31E24">
-    <title>Мир скидок</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#e22326">
+<title>Мир скидок — карта лояльности</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-        html { -webkit-text-size-adjust: 100%; }
+  html { -webkit-text-size-adjust:100%; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(180deg, #E31E24 0%, #C41820 100%);
-            color: white;
-            min-height: 100vh;
-            min-height: 100dvh;
-            padding: 20px;
-            padding-bottom: 100px;
-            padding-bottom: calc(100px + env(safe-area-inset-bottom));
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    background:#1a1a1a;
+    color:#fff;
+    min-height:100vh;
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    align-items:stretch;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(16px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  @keyframes spin {
+    from { transform:rotate(0deg); }
+    to { transform:rotate(360deg); }
+  }
+  @keyframes pop {
+    0% { transform:scale(.96); opacity:.6; }
+    100% { transform:scale(1); opacity:1; }
+  }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+  .phone {
+    position:relative;
+    width:100%;
+    max-width:460px;
+    min-height:100vh;
+    min-height:100dvh;
+    background:linear-gradient(180deg,#f03134 0%, #e22326 55%, #d81f22 100%);
+    overflow:hidden;
+    padding-bottom:120px;
+    padding-bottom:calc(120px + env(safe-area-inset-bottom));
+    box-shadow:0 24px 70px rgba(0,0,0,.65);
+  }
 
-        @keyframes pop {
-            0% { transform: scale(0.96); opacity: 0.6; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+  .sheet {
+    position:relative;
+    z-index:10;
+    padding:22px 22px 0;
+    animation:fadeInUp .5s ease-out both;
+  }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            animation: fadeInUp 0.5s ease-out;
-        }
+  .sheet-head {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:4px;
+  }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
+  .logo { display:flex; align-items:center; gap:9px; }
+  .logo .b {
+    width:40px; height:40px; border-radius:50%;
+    background:#fff; color:#e22326;
+    display:flex; align-items:center; justify-content:center;
+    font:900 27px Arial,sans-serif;
+    box-shadow:inset 0 0 0 3px #fff, 0 0 0 2px #e22326;
+    transition:box-shadow .3s;
+  }
+  .logo .name {
+    color:#fff; font-size:23px; font-weight:900; letter-spacing:1px;
+    font-family:'Arial Narrow',Arial,sans-serif;
+    text-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
 
-        .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #E31E24;
-            font-weight: 900;
-            font-size: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            transition: transform 0.3s ease;
-        }
+  .close-btn {
+    width:40px; height:40px; border-radius:50%;
+    background:#fff; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    color:#222; box-shadow:0 2px 6px rgba(0,0,0,.15);
+    transition:transform .3s, box-shadow .3s;
+    outline:none;
+  }
+  .close-btn:active { transform:scale(.92); box-shadow:0 4px 14px rgba(0,0,0,.3); }
 
-        .logo-icon:active { transform: scale(0.95); }
+  /* Баланс / статус */
+  .balance-row {
+    display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+    margin:16px 0 0;
+  }
+  .chip {
+    background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.25);
+    padding:6px 14px; border-radius:999px;
+    font-size:13px; font-weight:600;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  }
+  .chip b { font-size:15px; }
 
-        .close-btn {
-            width: 36px;
-            height: 36px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 18px;
-            color: #E31E24;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s ease;
-            border: none;
-            outline: none;
-        }
+  /* Карточка с QR */
+  .qr-card {
+    margin:22px auto 0;
+    width:264px; max-width:100%;
+    background:#fff;
+    border-radius:20px;
+    padding:18px 18px 20px;
+    box-shadow:0 6px 18px rgba(0,0,0,.2);
+    transition:box-shadow .4s;
+    position:relative;
+  }
+  .qr-card:active { box-shadow:0 14px 34px rgba(0,0,0,.28); }
+  .qr-wrap {
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .qr-img {
+    width:100%; height:auto; display:block;
+    border-radius:6px;
+    image-rendering:pixelated; image-rendering:crisp-edges;
+    animation:pop .35s ease-out;
+  }
+  .qr-hint { color:#8b909c; font-size:12.5px; text-align:center; line-height:1.4; }
+  .qr-empty {
+    color:#b42318; font-size:14px; text-align:center;
+    padding:38px 10px; line-height:1.5;
+  }
 
-        .close-btn:active {
-            transform: scale(0.9);
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-        }
+  .rules {
+    text-align:center; color:#fff; font-size:13.5px;
+    margin:16px auto 0; max-width:300px; line-height:1.45;
+  }
+  .rules a { color:#fff; text-decoration:underline; text-underline-offset:2px; transition:opacity .25s; }
+  .rules a:active { opacity:.75; }
 
-        /* Баланс / статус */
-        .balance-row {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 18px;
-            animation: fadeInUp 0.5s ease-out 0.05s both;
-        }
+  .update-btn {
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    margin:16px auto 0; width:264px; max-width:100%;
+    background:#fff; border:none; cursor:pointer;
+    border-radius:999px; padding:13px 0;
+    color:#e22326; font-size:16px; font-weight:700;
+    box-shadow:0 3px 8px rgba(0,0,0,.15);
+    transition:transform .3s, box-shadow .3s;
+    outline:none; font-family:inherit;
+  }
+  .update-btn:active { transform:scale(.96); box-shadow:0 8px 20px rgba(0,0,0,.25); }
+  .refresh-icon { width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:20px; }
+  .refresh-icon.spinning { animation:spin .6s ease; }
 
-        .chip {
-            background: rgba(255, 255, 255, 0.16);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 600;
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-        }
+  .coupons-btn {
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    margin:10px auto 0; width:264px; max-width:100%;
+    background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.3);
+    color:#fff; text-decoration:none; cursor:pointer;
+    border-radius:999px; padding:12px 0;
+    font-size:15px; font-weight:700;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    transition:transform .3s, background .3s;
+  }
+  .coupons-btn:active { transform:scale(.96); }
+  .coupons-count {
+    background:#fff; color:#e22326;
+    border-radius:999px; min-width:24px; height:24px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; padding:0 7px;
+  }
 
-        .chip b { font-size: 15px; }
+  .access-timer {
+    text-align:center; font-size:12.5px; opacity:.9;
+    margin-top:16px;
+  }
+  .access-timer b { font-variant-numeric:tabular-nums; }
 
-        .qr-container {
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            animation: fadeInUp 0.5s ease-out 0.1s both;
-            transition: transform 0.3s ease;
-        }
+  /* Как действует */
+  .how { margin-top:26px; color:#fff; }
+  .how h2 { font-size:19.5px; font-weight:800; line-height:1.25; }
+  .how p { margin-top:12px; font-size:14.5px; line-height:1.5; opacity:.97; }
 
-        .qr-container:active { transform: scale(0.98); }
+  /* Нижняя кнопка Я Пэй */
+  .pay-bar {
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:#0d0723;
+    padding:12px 14px 16px;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom));
+    display:flex; justify-content:center;
+  }
+  .pay-inner { width:100%; max-width:460px; }
+  .pay-btn {
+    position:relative;
+    background:#171040;
+    border:1px solid #3d2f7a;
+    border-radius:18px;
+    padding:14px 0 12px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .3s, box-shadow .3s;
+  }
+  .pay-btn:active { opacity:.9; }
+  .pay-btn .title { color:#fff; font-size:20px; font-weight:800; }
+  .pay-btn .title .ya { display:inline-flex; align-items:center; gap:4px; vertical-align:-3px; margin-left:5px; }
+  .pay-btn .title .ya .o {
+    width:22px; height:22px; border-radius:50%; background:#fc3f1d;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:#fff; font-size:14px; font-weight:700;
+  }
+  .pay-btn .title .ya .p { color:#fff; font-style:italic; font-weight:900; letter-spacing:1px; }
+  .pay-btn .sub { color:#cfc9ea; font-size:12px; margin-top:3px; }
 
-        .qr-wrap {
-            width: 260px;
-            max-width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
+  @media (max-width:480px) {
+    .sheet { padding:18px 18px 0; }
+    .qr-card { width:240px; }
+    .logo .name { font-size:21px; }
+  }
+  @media (max-width:360px) {
+    .qr-card { width:220px; }
+    .logo .name { font-size:19px; }
+  }
 
-        .qr-img {
-            width: 100%;
-            height: auto;
-            display: block;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            border-radius: 8px;
-            animation: pop 0.35s ease-out;
-        }
-
-        .qr-hint {
-            color: #8b909c;
-            font-size: 12.5px;
-            text-align: center;
-            line-height: 1.4;
-        }
-
-        .qr-empty {
-            color: #b42318;
-            font-size: 14px;
-            text-align: center;
-            padding: 40px 12px;
-            line-height: 1.5;
-        }
-
-        .rules-link {
-            text-align: center;
-            font-size: 13px;
-            margin-bottom: 18px;
-            cursor: pointer;
-            text-decoration: underline;
-            opacity: 0.9;
-            animation: fadeInUp 0.5s ease-out 0.2s both;
-            transition: opacity 0.3s ease;
-            line-height: 1.4;
-            padding: 0 10px;
-        }
-
-        .rules-link:active { opacity: 0.7; }
-
-        .update-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background: white;
-            color: #E31E24;
-            border: none;
-            border-radius: 28px;
-            padding: 14px 28px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin: 0 auto 24px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeInUp 0.5s ease-out 0.3s both;
-            outline: none;
-            min-width: 200px;
-            font-family: inherit;
-        }
-
-        .update-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .refresh-icon {
-            width: 20px;
-            height: 20px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: transform 0.6s ease;
-        }
-
-        .update-btn:active .refresh-icon { transform: rotate(180deg); }
-        .refresh-icon.spinning { animation: spin 0.6s ease; }
-
-        .coupons-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background: white;
-            color: #E31E24;
-            border: none;
-            border-radius: 28px;
-            padding: 14px 28px;
-            font-size: 16px;
-            font-weight: 700;
-            text-decoration: none;
-            cursor: pointer;
-            margin: 0 auto 24px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeInUp 0.5s ease-out 0.35s both;
-            min-width: 200px;
-            font-family: inherit;
-        }
-
-        .coupons-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .coupons-btn .coupons-count {
-            background: #E31E24;
-            color: white;
-            border-radius: 999px;
-            min-width: 24px;
-            height: 24px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: 700;
-            padding: 0 7px;
-        }
-
-        .access-timer {
-            text-align: center;
-            font-size: 12px;
-            opacity: 0.85;
-            margin-bottom: 18px;
-            animation: fadeInUp 0.5s ease-out 0.25s both;
-        }
-
-        .access-timer b { font-variant-numeric: tabular-nums; }
-
-        .info-section {
-            margin-top: 28px;
-            animation: fadeInUp 0.5s ease-out 0.4s both;
-        }
-
-        .info-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 14px;
-            letter-spacing: 0.3px;
-        }
-
-        .info-text {
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 14px;
-            opacity: 0.95;
-        }
-
-        .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(20, 20, 20, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 14px 20px;
-            padding-bottom: calc(14px + env(safe-area-inset-bottom));
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-            animation: fadeInUp 0.5s ease-out 0.5s both;
-            z-index: 100;
-        }
-
-        .footer-content {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
-
-        .footer-text { font-size: 15px; font-weight: 500; white-space: nowrap; }
-
-        .footer-logo {
-            background: linear-gradient(135deg, #FF6B6B 0%, #E31E24 100%);
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 8px rgba(227, 30, 36, 0.4);
-        }
-
-        .footer-subtitle { font-size: 11px; opacity: 0.7; margin-top: 2px; }
-
-        .plus-icons { display: flex; gap: 6px; }
-
-        .plus-icon {
-            width: 28px;
-            height: 28px;
-            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: 700;
-            box-shadow: 0 2px 8px rgba(156, 39, 176, 0.4);
-        }
-
-        @media (max-width: 480px) {
-            body { padding: 16px; padding-bottom: 90px; padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
-            .qr-wrap { width: 240px; }
-            .logo { font-size: 18px; }
-        }
-
-        @media (max-width: 360px) {
-            .qr-wrap { width: 220px; }
-            .update-btn { min-width: 180px; padding: 12px 24px; font-size: 15px; }
-        }
-
-        @media (min-width: 768px) {
-            body { max-width: 440px; margin: 0 auto; }
-        }
-    </style>
+  @media (prefers-reduced-motion: reduce) {
+    * { transition:none !important; animation:none !important; }
+  }
+</style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">
-            <div class="logo-icon">Б</div>
-            <span>МИР СКИДОК</span>
-        </div>
-        <button class="close-btn" aria-label="Закрыть" onclick="closePage()">✕</button>
+<div class="phone">
+
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="logo">
+        <span class="b">Б</span>
+        <span class="name">МИР СКИДОК</span>
+      </div>
+      <button class="close-btn" aria-label="Закрыть" onclick="closePage()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button>
     </div>
 
     {% if bristol_meta.balance is not none and bristol_meta.balance != '' %}
     <div class="balance-row">
-        <span class="chip"><b>{{ bristol_meta.balance }}</b> баллов</span>
+      <span class="chip"><b>{{ bristol_meta.balance }}</b> баллов</span>
     </div>
     {% endif %}
 
-    <div class="qr-container">
-        {% if card_data %}
-        <div class="qr-wrap">
-            <img class="qr-img" id="qr" src="/s/{{ session.id }}/card/qr.png" alt="QR карты лояльности" draggable="false">
-            <div class="qr-hint">Покажите QR-код кассиру для начисления баллов</div>
-        </div>
-        {% else %}
-        <div class="qr-empty">QR-код карты недоступен.<br>Попросите администратора синхронизировать данные.</div>
-        {% endif %}
+    <div class="qr-card">
+      {% if card_data %}
+      <div class="qr-wrap">
+        <img class="qr-img" id="qr" src="/s/{{ session.id }}/card/qr.png" alt="QR карты лояльности" draggable="false">
+        <div class="qr-hint">Покажите QR-код кассиру для начисления баллов</div>
+      </div>
+      {% else %}
+      <div class="qr-empty">QR-код карты недоступен.<br>Попросите администратора синхронизировать данные.</div>
+      {% endif %}
     </div>
 
-    {% if remaining is not none %}
-    <div class="access-timer" id="timer" data-rem="{{ remaining }}"></div>
-    {% endif %}
-
-    <div class="rules-link">
-        Полные правила участия, Правила акции «День рождения Бристоль»
+    <div class="rules">
+      <a href="#">Полные правила участия</a>, <a href="#">Правила акции «День рождения Бристоль»</a>
     </div>
 
     {% if card_data %}
     <button class="update-btn" id="refreshBtn">
-        <span class="refresh-icon" id="refreshIcon">↻</span>
-        Обновить QR-код
+      <span class="refresh-icon" id="refreshIcon">↻</span>
+      обновить QR-код
     </button>
     {% endif %}
 
     {% if coupons_count %}
     <a class="coupons-btn" href="/s/{{ session.id }}/coupons">
-        <span class="coupons-count">{{ coupons_count }}</span>
-        Все купоны
+      <span class="coupons-count">{{ coupons_count }}</span>
+      Все купоны
     </a>
     {% endif %}
 
-    <div class="info-section">
-        <h2 class="info-title">Как действует карта «Мир скидок»</h2>
+    {% if remaining is not none %}
+    <div class="access-timer" id="timer" data-rem="{{ remaining }}"></div>
+    {% endif %}
 
-        <p class="info-text">
-            Карта лояльности «Мир скидок» даёт право на получение специальных цен и скидок на товары, обозначенные красным ценником. Скидка применяется перед оплатой покупки после сканирования персональной карты лояльности.
-        </p>
-
-        <p class="info-text">
-            Скидка на товар, предоставляемая по карте «Мир скидок», не суммируется с другими акциями на этот же товар.
-        </p>
-
-        <p class="info-text">
-            Стоимость алкогольной продукции с применением скидки не может быть ниже уровня минимальной розничной цены, установленной законодательством.
-        </p>
+    <div class="how">
+      <h2>Как действует карта «Мир скидок»</h2>
+      <p>Карта лояльности «Мир скидок» даёт право на получение специальных цен и скидок на товары, обозначенные красным ценником. Скидка применяется перед оплатой покупки после сканирования персональной карты лояльности.</p>
+      <p>Скидка на товар, предоставляемая по карте «Мир скидок», не суммируется с другими акциями на этот же товар.</p>
+      <p>Стоимость алкогольной продукции с применением скидки не может быть ниже уровня минимальной розничной цены, установленной законодательством.</p>
     </div>
+  </div>
 
-    <div class="footer">
-        <div class="footer-content">
-            <div>
-                <div class="footer-text">Войти в <span class="footer-logo">Я ПЭЙ</span></div>
-                <div class="footer-subtitle">быстрая оплата с кешбеком</div>
-            </div>
-        </div>
-        <div class="plus-icons">
-            <div class="plus-icon">+</div>
-            <div class="plus-icon">+</div>
-        </div>
+  <div class="pay-bar">
+    <div class="pay-inner">
+      <div class="pay-btn">
+        <div class="title">Войти в <span class="ya"><span class="o">Я</span><span class="p">ПЭЙ</span></span></div>
+        <div class="sub">быстрая оплата с кешбеком</div>
+      </div>
     </div>
+  </div>
 
-    <script>
-        var SID = '{{ session.id }}';
+</div>
 
-        function qrUrl() { return '/s/' + SID + '/card/qr.png?t=' + Date.now(); }
+<script>
+  var SID = '{{ session.id }}';
 
-        function refreshQr() {
-            var img = document.getElementById('qr');
-            if (!img) return;
-            img.style.animation = 'none';
-            void img.offsetWidth;
-            img.style.animation = 'pop 0.35s ease-out';
-            img.src = qrUrl();
-        }
+  function qrUrl() { return '/s/' + SID + '/card/qr.png?t=' + Date.now(); }
 
-        // Кнопка: тянет свежие коды карты с сервера (как приложение)
-        function regenerateQr() {
-            var img = document.getElementById('qr');
-            if (!img) return;
-            img.style.animation = 'none';
-            void img.offsetWidth;
-            img.style.animation = 'pop 0.35s ease-out';
-            img.src = '/s/' + SID + '/card/qr.png?refresh=1&t=' + Date.now();
-        }
+  function refreshQr() {
+    var img = document.getElementById('qr');
+    if (!img) return;
+    img.style.animation = 'none';
+    void img.offsetWidth;
+    img.style.animation = 'pop 0.35s ease-out';
+    img.src = qrUrl();
+  }
 
-        var refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function () {
-                var icon = document.getElementById('refreshIcon');
-                if (icon) {
-                    icon.classList.remove('spinning');
-                    void icon.offsetWidth;
-                    icon.classList.add('spinning');
-                }
-                regenerateQr();
-            });
-        }
+  function regenerateQr() {
+    var img = document.getElementById('qr');
+    if (!img) return;
+    img.style.animation = 'none';
+    void img.offsetWidth;
+    img.style.animation = 'pop 0.35s ease-out';
+    img.src = '/s/' + SID + '/card/qr.png?refresh=1&t=' + Date.now();
+  }
 
-        // QR карты меняется каждый час — тихо обновляем
-        setInterval(refreshQr, 60000);
+  var refreshBtn = document.getElementById('refreshBtn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function () {
+      var icon = document.getElementById('refreshIcon');
+      if (icon) {
+        icon.classList.remove('spinning');
+        void icon.offsetWidth;
+        icon.classList.add('spinning');
+      }
+      regenerateQr();
+    });
+  }
 
-        // Отсчёт срока доступа
-        (function () {
-            var el = document.getElementById('timer');
-            if (!el) return;
-            var v = parseInt(el.dataset.rem, 10);
-            if (isNaN(v)) { el.textContent = ''; return; }
-            function p(n) { return String(n).padStart(2, '0'); }
-            function tick() {
-                var s = Math.max(0, v);
-                var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
-                    m = Math.floor(s % 3600 / 60), sec = s % 60;
-                var txt = d > 0 ? (d + 'д ' + h + 'ч ' + m + 'м')
-                         : (h > 0 ? (h + ':' + p(m) + ':' + p(sec))
-                                  : (m + ':' + p(sec)));
-                el.innerHTML = 'Доступ к карте: <b>' + txt + '</b>';
-                v--;
-            }
-            tick();
-            setInterval(tick, 1000);
-        })();
+  setInterval(refreshQr, 60000);
 
-        function closePage() {
-            if (window.history.length > 1) { window.history.back(); }
-            else { document.body.style.opacity = '0'; document.body.style.transition = 'opacity .3s'; }
-        }
+  (function () {
+    var el = document.getElementById('timer');
+    if (!el) return;
+    var v = parseInt(el.dataset.rem, 10);
+    if (isNaN(v)) { el.textContent = ''; return; }
+    function p(n) { return String(n).padStart(2, '0'); }
+    function tick() {
+      var s = Math.max(0, v);
+      var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
+          m = Math.floor(s % 3600 / 60), sec = s % 60;
+      var txt = d > 0 ? (d + 'д ' + h + 'ч ' + m + 'м')
+               : (h > 0 ? (h + ':' + p(m) + ':' + p(sec))
+                        : (m + ':' + p(sec)));
+      el.innerHTML = 'Доступ к карте: <b>' + txt + '</b>';
+      v--;
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
 
-        // Предотвращение масштабирования на double-tap
-        var lastTouchEnd = 0;
-        document.addEventListener('touchend', function (event) {
-            var now = Date.now();
-            if (now - lastTouchEnd <= 300) { event.preventDefault(); }
-            lastTouchEnd = now;
-        }, false);
-    </script>
+  function closePage() {
+    if (window.history.length > 1) { window.history.back(); }
+    else { document.body.style.opacity = '0'; document.body.style.transition = 'opacity .3s'; }
+  }
+
+  var lastTouchEnd = 0;
+  document.addEventListener('touchend', function (event) {
+    var now = Date.now();
+    if (now - lastTouchEnd <= 300) { event.preventDefault(); }
+    lastTouchEnd = now;
+  }, false);
+</script>
 </body>
 </html>

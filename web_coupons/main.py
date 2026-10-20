@@ -313,6 +313,11 @@ async def index(request: Request):
     })
 
 
+@app.get('/ticker', response_class=HTMLResponse)
+async def ticker_page(request: Request):
+    return templates.TemplateResponse(request, 'ticker.html', {})
+
+
 @app.get('/api/admin/data')
 async def api_admin_data():
     aid = get_active_account_id()
