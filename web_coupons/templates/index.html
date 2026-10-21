@@ -83,6 +83,10 @@
             {% for k, v in durations.items() %}<option value='{{k}}' {% if k=='1h' %}selected{% endif %}>{{v}}</option>{% endfor %}
           </select>
         </div>
+        <label class='field' style='max-width:230px;display:flex;align-items:center;gap:9px;margin:0;cursor:pointer'>
+          <input type='checkbox' name='show_coupons' value='1' checked style='width:auto;margin:0;flex:none'>
+          <span>С вкладкой «Все купоны»</span>
+        </label>
         <button class='btn' type='submit'>
           <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 5v14M5 12h14'/></svg>
           Выдать сессию
@@ -98,6 +102,7 @@
       <div class='sectionhead'>
         <h2>{{ s.name }}</h2>
         <span data-badge></span>
+        <span class='badge {% if s.show_coupons %}ok{% else %}off{% endif %}'>Купоны: {% if s.show_coupons %}вкл{% else %}выкл{% endif %}</span>
         <span class='spacer'></span>
         {% if s.active %}
           <form method='post' action='/sessions/{{s.id}}/revoke' style='display:inline'><button class='btn sm danger' type='submit'>Отозвать доступ</button></form>
@@ -116,7 +121,7 @@
           </div>
           <div class='actions mt' style='justify-content:flex-start'>
             <a class='btn sm success' href='/s/{{s.id}}/card' target='_blank'>Открыть карту</a>
-            <a class='btn sm ghost' href='/s/{{s.id}}/coupons' target='_blank'>Купоны сессии</a>
+            {% if s.show_coupons %}<a class='btn sm ghost' href='/s/{{s.id}}/coupons' target='_blank'>Купоны сессии</a>{% endif %}
           </div>
 
           <div class='mt2 small muted'>Доступ: <b data-timer class='mono'></b></div>
@@ -131,6 +136,10 @@
                   {% for k, v in durations.items() %}<option value='{{k}}'>{{v}}</option>{% endfor %}
                 </select>
               </div>
+              <label class='field' style='max-width:180px;display:flex;align-items:center;gap:8px;margin:0;cursor:pointer'>
+                <input type='checkbox' name='show_coupons' value='1' {% if s.show_coupons %}checked{% endif %} style='width:auto;margin:0;flex:none'>
+                <span>Все купоны</span>
+              </label>
               <button class='btn sm ghost' type='submit'>Сохранить</button>
             </div>
           </form>

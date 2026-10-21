@@ -205,7 +205,7 @@ async def change_password(current: str = Form(...), new: str = Form(...)):
 def _load_session(session_id: str):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT id, name, active, expires_at, created_at, account_id FROM sessions WHERE id=?', (session_id,))
+    cur.execute('SELECT id, name, active, expires_at, created_at, account_id, show_coupons FROM sessions WHERE id=?', (session_id,))
     row = cur.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -284,7 +284,7 @@ async def index(request: Request):
     aid = get_active_account_id()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('SELECT id, name, active, expires_at, created_at, account_id FROM sessions '
+    cur.execute('SELECT id, name, active, expires_at, created_at, account_id, show_coupons FROM sessions '
                 'WHERE account_id=? ORDER BY created_at DESC', (aid,))
     sessions = [dict(r) for r in cur.fetchall()]
     for s in sessions:
@@ -434,7 +434,7 @@ async def account_delete_route(account_id: int):
 
 
 @app.post('/sessions/create')
-async def create_session(name: str = Form(...), duration: str = Form('none')):
+async def create_session(name: str = Form(...), duration: str = Form('none'), show_coupons: int = Form(0)):
     minutes = DURATIONS.get(duration, 0)
     expires_at = None
     if minutes:
@@ -443,23 +443,25 @@ async def create_session(name: str = Form(...), duration: str = Form('none')):
     aid = get_active_account_id()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('INSERT INTO sessions (id,name,active,expires_at,account_id) VALUES (?,?,1,?,?)',
-                (sid, name, expires_at, aid))
+    cur.execute('INSERT INTO sessions (id,name,active,expires_at,account_id,show_coupons) VALUES (?,?,1,?,?,?)',
+                (sid, name, expires_at, aid, 1 if show_coupons else 0))
     conn.commit()
     conn.close()
     return RedirectResponse(url='/', status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post('/sessions/{session_id}/update')
-async def update_session(session_id: str, name: str = Form(...), duration: str = Form('')):
+async def update_session(session_id: str, name: str = Form(...), duration: str = Form(''), show_coupons: int = Form(0)):
     conn = get_conn()
     cur = conn.cursor()
     if duration in DURATIONS:
         minutes = DURATIONS[duration]
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat() if minutes else None
-        cur.execute('UPDATE sessions SET name=?, expires_at=? WHERE id=?', (name, expires_at, session_id))
+        cur.execute('UPDATE sessions SET name=?, expires_at=?, show_coupons=? WHERE id=?',
+                    (name, expires_at, 1 if show_coupons else 0, session_id))
     else:
-        cur.execute('UPDATE sessions SET name=? WHERE id=?', (name, session_id))
+        cur.execute('UPDATE sessions SET name=?, show_coupons=? WHERE id=?',
+                    (name, 1 if show_coupons else 0, session_id))
     conn.commit()
     conn.close()
     return RedirectResponse(url='/', status_code=status.HTTP_303_SEE_OTHER)
@@ -659,6 +661,7 @@ async def public_card(request: Request, session_id: str):
         'remaining': _remaining(s.get('expires_at')),
         'bristol_meta': bristol.get_meta(aid),
         'coupons_count': coupons_count,
+        'show_coupons': s.get('show_coupons', 1) == 1,
     })
 
 
@@ -686,6 +689,8 @@ async def public_coupons(request: Request, session_id: str):
         raise HTTPException(status_code=404)
     if not _session_valid(s):
         return _expired_page(request, session_id)
+    if s.get('show_coupons', 1) != 1:
+        raise HTTPException(status_code=404)
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT code,value,status,note FROM coupons WHERE status='available' ORDER BY id DESC")

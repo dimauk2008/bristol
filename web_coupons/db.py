@@ -142,6 +142,7 @@ def init_db():
 
     _add_col(cur, 'sessions', 'expires_at', 'TEXT')
     _add_col(cur, 'sessions', 'account_id', 'INTEGER DEFAULT 1')
+    _add_col(cur, 'sessions', 'show_coupons', 'INTEGER DEFAULT 1')
     _add_col(cur, 'coupon_grants', 'account_id', 'INTEGER DEFAULT 1')
     _migrate_meta(cur)
     _migrate_coupons(cur)

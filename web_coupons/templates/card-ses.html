@@ -270,7 +270,7 @@
     </button>
     {% endif %}
 
-    {% if coupons_count %}
+    {% if show_coupons|default(true) and coupons_count %}
     <a class="coupons-btn" href="/s/{{ session.id }}/coupons">
       <span class="coupons-count">{{ coupons_count }}</span>
       Все купоны
