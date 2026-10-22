@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Сессия неактуальна</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Контейнер для кота и облачка */
+        .cat-scene {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-end;
+        }
+
+        /* Реалистичный кот */
+        .cat-img {
+            height: 280px;
+            width: auto;
+            object-fit: contain;
+            margin-left: -40px;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.2));
+            animation: float 3s ease-in-out infinite;
+            z-index: 1;
+        }
+
+        /* Облачко комикса */
+        .speech-bubble {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            background: #ffffff;
+            border: 3px solid #2c3e50;
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 280px;
+            box-shadow: 6px 6px 0 rgba(44, 62, 80, 0.2);
+            animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            z-index: 2;
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -25px;
+            left: -15px;
+            width: 0;
+            height: 0;
+            border-top: 25px solid #2c3e50;
+            border-right: 25px solid transparent;
+            transform: rotate(-15deg);
+        }
+
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -18px;
+            left: -10px;
+            width: 0;
+            height: 0;
+            border-top: 19px solid #ffffff;
+            border-right: 19px solid transparent;
+            transform: rotate(-15deg);
+            z-index: 1;
+        }
+
+        .speech-bubble p {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+            line-height: 1.4;
+            margin: 0;
+            text-align: left;
+        }
+
+        .speech-bubble .error-title {
+            color: #e74c3c;
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 15px;
+            margin-top: 10px;
+        }
+
+        .description {
+            color: #555;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            padding: 0 20px;
+        }
+
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .bot-info {
+            background: #f0f2f5;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 10px;
+            border: 1px solid #e1e4e8;
+        }
+
+        .bot-info p {
+            margin-bottom: 8px;
+            font-size: 15px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .bot-info p:last-child {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0) translateX(20px); opacity: 0; }
+            100% { transform: scale(1) translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .cat-scene {
+                height: 240px;
+                justify-content: center;
+            }
+
+            .cat-img {
+                height: 220px;
+                margin-left: 0;
+            }
+
+            .speech-bubble {
+                right: 10px;
+                top: 10px;
+                max-width: 200px;
+                padding: 15px;
+            }
+
+            .speech-bubble p {
+                font-size: 14px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="cat-scene">
+            <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Грустный кот" class="cat-img">
+            
+            <div class="speech-bubble">
+                <span class="error-title">Мяу! Ошибка 404!</span>
+                <p>Сессия уже неактуальна... Обратись в бот, где покупал товар!</p>
+            </div>
+        </div>
+
+        <h1>Сессия неактуальна</h1>
+        <p class="description">
+            К сожалению, ваша сессия <span class="highlight">больше не действительна</span>. 
+            Пожалуйста, обратитесь в бот, где вы совершали покупку, для получения актуальной информации.
+        </p>
+
+        <div class="bot-info">
+            <p>💬 Свяжитесь с ботом для восстановления доступа</p>
+            <p>Код ошибки: 404</p>
+        </div>
+    </div>
+</body>
+</html>

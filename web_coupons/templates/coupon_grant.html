@@ -4,47 +4,17 @@
 
 {% block body %}
 <div class='share'>
-  <div class='ticket' style='max-width:460px'>
-    <div class='band'>
-      <div class='k'>Bristol · Купон</div>
-      <div class='t'>{{ coupon.title or coupon.universal_coupon or 'Ваш купон' }}</div>
-    </div>
+  <div style='width:100%;max-width:460px;text-align:center'>
+    {% if coupon.image_url %}
+    <img src='{{ coupon.image_url }}' alt='Купон' style='display:block;width:100%;border-radius:16px' onerror="this.style.display='none'">
+    {% endif %}
 
-    <div class='body'>
-      {% if coupon.image_url %}
-      <div class='qrbox' style='display:block;padding:0;overflow:hidden'>
-        <img src='{{ coupon.image_url }}' alt='Купон' style='display:block;width:100%;border-radius:12px' onerror="this.parentNode.style.display='none'">
-      </div>
-      {% endif %}
+    <img src='/g/{{ token }}/qr.png' alt='DataMatrix купона'
+         style='display:block;width:100%;max-width:320px;margin:16px auto 0;background:#fff;border-radius:16px'>
 
-      <div class='center' style='margin:18px 0'>
-        <div class='qrbox' style='border:0;border-radius:0;box-shadow:none;padding:12px'><img class='qr coupon' src='/g/{{ token }}/qr.png' alt='QR купона'></div>
-        <div class='small muted mt'>Покажите QR-код на кассе</div>
-      </div>
-
-      <div class='pillrow' style='margin-top:16px'>
-        {% if coupon.actual_end %}<span class='badge red'>Действует до {{ coupon.actual_end[:10] }}</span>{% endif %}
-      </div>
-
-      {% if remaining is not none %}
-      <div class='small muted center mt2' id='granttimer' data-rem='{{ remaining }}'></div>
-      {% endif %}
-    </div>
+    {% if coupon.actual_end %}
+    <div style='margin-top:16px;font-size:16px;font-weight:700'>Действует до {{ coupon.actual_end[:10] }}</div>
+    {% endif %}
   </div>
 </div>
-
-<script>
-(function(){
-  var e=document.getElementById('granttimer'); if(!e) return;
-  var v=parseInt(e.dataset.rem,10); if(isNaN(v)){ e.textContent=''; return; }
-  function p(n){return String(n).padStart(2,'0');}
-  function f(){
-    var s=Math.max(0,v);
-    var d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),ss=s%60;
-    e.textContent='Ссылка действует ещё: '+(d>0?d+'д '+h+'ч':(h>0?h+':'+p(m)+':'+p(ss):m+':'+p(ss)));
-    v--;
-  }
-  f(); setInterval(f,1000);
-})();
-</script>
 {% endblock %}

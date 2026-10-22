@@ -233,10 +233,12 @@ def _remaining(expires_at: str | None):
         return None
 
 
+def _stub_page(request: Request, status_code: int = status.HTTP_404_NOT_FOUND):
+    return templates.TemplateResponse(request, 'stub.html', {}, status_code=status_code)
+
+
 def _expired_page(request: Request, session_id: str):
-    return templates.TemplateResponse(
-        request, 'session_expired.html', {'session_id': session_id}, status_code=status.HTTP_410_GONE
-    )
+    return _stub_page(request, status.HTTP_410_GONE)
 
 
 def _load_grant(token: str):
@@ -616,13 +618,12 @@ async def revoke_grant(token: str):
 async def public_grant(request: Request, token: str):
     g = _load_grant(token)
     if not g:
-        raise HTTPException(status_code=404)
+        return _stub_page(request)
     if not _grant_valid(g):
-        return templates.TemplateResponse(request, 'session_expired.html', {'session_id': ''},
-                                          status_code=status.HTTP_410_GONE)
+        return _stub_page(request, status.HTTP_410_GONE)
     c = bristol.get_coupon(g['number'], g.get('account_id'))
     if not c:
-        raise HTTPException(status_code=404, detail='Coupon not found')
+        return _stub_page(request)
     return templates.TemplateResponse(request, 'coupon_grant.html', {
         'coupon': c,
         'token': token,
@@ -646,7 +647,7 @@ async def public_grant_qr(token: str):
 async def public_card(request: Request, session_id: str):
     s = _load_session(session_id)
     if not s:
-        raise HTTPException(status_code=404)
+        return _stub_page(request)
     if not _session_valid(s):
         return _expired_page(request, session_id)
     aid = s.get('account_id')
@@ -686,7 +687,7 @@ async def public_card_qr(session_id: str, refresh: bool = False):
 async def public_coupons(request: Request, session_id: str):
     s = _load_session(session_id)
     if not s:
-        raise HTTPException(status_code=404)
+        return _stub_page(request)
     if not _session_valid(s):
         return _expired_page(request, session_id)
     if s.get('show_coupons', 1) != 1:
@@ -712,12 +713,12 @@ async def public_coupons(request: Request, session_id: str):
 async def public_bristol_coupon(request: Request, session_id: str, number: str):
     s = _load_session(session_id)
     if not s:
-        raise HTTPException(status_code=404)
+        return _stub_page(request)
     if not _session_valid(s):
         return _expired_page(request, session_id)
     c = bristol.get_coupon(number, s.get('account_id'))
     if not c:
-        raise HTTPException(status_code=404, detail='Coupon not found')
+        return _stub_page(request)
     return templates.TemplateResponse(request, 'bristol_coupon.html', {
         'session': s,
         'coupon': c,
@@ -739,7 +740,7 @@ async def public_bristol_coupon_qr(session_id: str, number: str):
 async def public_get_coupon(request: Request, session_id: str, code: str):
     s = _load_session(session_id)
     if not s:
-        raise HTTPException(status_code=404)
+        return _stub_page(request)
     if not _session_valid(s):
         return _expired_page(request, session_id)
     conn = get_conn()
@@ -748,10 +749,10 @@ async def public_get_coupon(request: Request, session_id: str, code: str):
     c = cur.fetchone()
     if not c:
         conn.close()
-        raise HTTPException(status_code=404, detail='Coupon not found')
+        return _stub_page(request)
     if c['status'] != 'available':
         conn.close()
-        return templates.TemplateResponse(request, 'coupon_given.html', {'session': s, 'coupon': None})
+        return _stub_page(request)
     cur.execute("UPDATE coupons SET status='used', used_at=?, used_by_session_id=? WHERE id=?", (datetime.now(timezone.utc).isoformat(), session_id, c['id']))
     conn.commit()
     cur.execute("SELECT id,code,value,status,note,used_by_session_id FROM coupons WHERE id=?", (c['id'],))

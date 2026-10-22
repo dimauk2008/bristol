@@ -2,54 +2,19 @@
 {% block title %}Купон — {{session.name}}{% endblock %}
 {% block body_class %}pub{% endblock %}
 
-{% block head %}
-<style>
-.ldr{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
-  background:rgba(14,16,22,.48);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
-  opacity:1;visibility:visible;transition:opacity .5s ease,visibility .5s ease}
-.ldr.hide{opacity:0;visibility:hidden;pointer-events:none}
-.ldr .ring{width:58px;height:58px;border-radius:50%;
-  border:4px solid rgba(255,255,255,.22);border-top-color:var(--red);
-  animation:ldrspin .9s linear infinite;box-shadow:0 8px 26px -8px rgba(0,0,0,.5)}
-@keyframes ldrspin{to{transform:rotate(360deg)}}
-</style>
-{% endblock %}
-
 {% block body %}
-<div class='ldr' id='ldr'><div class='ring'></div></div>
 <div class='share'>
-  <div class='ticket' style='max-width:460px'>
-    <div class='band'>
-      <div class='k'>Bristol · Купон</div>
-      <div class='t'>{{ coupon.title or coupon.universal_coupon or 'Ваш купон' }}</div>
-    </div>
+  <div style='width:100%;max-width:460px;text-align:center'>
+    {% if coupon.image_url %}
+    <img src='{{ coupon.image_url }}' alt='Купон' style='display:block;width:100%;border-radius:16px' onerror="this.style.display='none'">
+    {% endif %}
 
-    <div class='body'>
-      {% if coupon.image_url %}
-      <div class='qrbox' style='display:block;padding:0;overflow:hidden'>
-        <img src='{{ coupon.image_url }}' alt='Купон' style='display:block;width:100%;border-radius:12px' onerror="this.parentNode.style.display='none'">
-      </div>
-      {% endif %}
+    <img src='/s/{{session.id}}/b/{{coupon.number}}/qr.png' alt='DataMatrix купона'
+         style='display:block;width:100%;max-width:320px;margin:16px auto 0;background:#fff;border-radius:16px'>
 
-      <div class='center' style='margin:18px 0'>
-        <div class='qrbox' style='border:0;border-radius:0;box-shadow:none;padding:12px'><img class='qr coupon' src='/s/{{session.id}}/b/{{coupon.number}}/qr.png' alt='QR купона'></div>
-        <div class='small muted mt'>Покажите QR-код на кассе</div>
-      </div>
-
-      <div class='pillrow' style='margin-top:16px'>
-        {% if coupon.actual_end %}<span class='badge red'>Действует до {{ coupon.actual_end[:10] }}</span>{% endif %}
-      </div>
-    </div>
-
-    <div class='cut'></div>
+    {% if coupon.actual_end %}
+    <div style='margin-top:16px;font-size:16px;font-weight:700'>Действует до {{ coupon.actual_end[:10] }}</div>
+    {% endif %}
   </div>
 </div>
-
-<script>
-(function(){
-  var l=document.getElementById('ldr');
-  if(!l) return;
-  setTimeout(function(){ l.classList.add('hide'); }, 5000);
-})();
-</script>
 {% endblock %}
