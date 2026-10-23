@@ -574,7 +574,7 @@ async def import_coupons(text: str = Form(...)):
             code = l.split(';')[0].split(',')[0].strip()
             if not code:
                 continue
-            cur.execute("INSERT OR IGNORE INTO coupons (code,status) VALUES (?, 'available')", (code,))
+            cur.execute("INSERT INTO coupons (code,status) VALUES (?, 'available') ON CONFLICT DO NOTHING", (code,))
         except Exception:
             continue
     conn.commit()

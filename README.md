@@ -24,6 +24,7 @@ docker run -p 8000:8000 --env-file .env -v bristol_data:/data bristol
 | `BRISTOL_EXTERNAL_ID` | Guid пользователя (external_id) |
 | `BRISTOL_CARD_DEVICE_ID` | Device id для Data Matrix карты |
 | `BRISTOL_X_API_KEY` | API-ключ Bristol |
+| `DATABASE_URL` | Строка подключения PostgreSQL (`postgresql://user:pass@host:5432/db`). Если задана — SQLite не используется |
 | `DB_PATH` | Путь к SQLite (по умолчанию `/data/coupons.db` в контейнере) |
 
 Для сохранения базы между перезапусками подключите volume к `/data`.

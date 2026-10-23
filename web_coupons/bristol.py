@@ -106,10 +106,10 @@ def account_add(name: str = '', phone: str = '', card_id: str = '',
     cur = conn.cursor()
     cur.execute(
         'INSERT INTO accounts (name, phone, card_id, external_id, refresh_token, token) '
-        'VALUES (?,?,?,?,?,?)',
+        'VALUES (?,?,?,?,?,?) RETURNING id',
         (name or 'Новый аккаунт', phone, card_id, external_id, refresh_token, token),
     )
-    aid = cur.lastrowid
+    aid = cur.fetchone()['id']
     conn.commit()
     conn.close()
     if refresh_token or token:
