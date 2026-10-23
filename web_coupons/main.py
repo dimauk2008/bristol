@@ -9,6 +9,7 @@ import json
 import os
 import secrets
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Request, Form, HTTPException, status
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
@@ -22,9 +23,21 @@ from db import init_db, get_conn, get_setting, set_setting, get_active_account_i
 from qr import make_qr_png
 from datamatrix import make_dm_png
 import bristol
+import scheduler
 from bristol import BristolError
 
-app = FastAPI(title='Coupons & Card QR')
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await scheduler.start()
+    try:
+        yield
+    finally:
+        await scheduler.stop()
+
+
+app = FastAPI(title='Coupons & Card QR', lifespan=lifespan)
+
 
 BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=BASE_DIR / 'templates')
@@ -307,6 +320,7 @@ async def index(request: Request):
         'grants': _active_grants(aid),
         'accounts': bristol.accounts_list(),
         'active_account_id': aid,
+        'auto': scheduler.status(),
         'durations': DURATION_LABELS,
         'perr': request.query_params.get('perr'),
         'pok': request.query_params.get('pok'),
@@ -344,8 +358,14 @@ async def api_admin_data():
         'grants': _active_grants(aid),
         'counts': {'bristol': bcount, 'manual': manual},
         'last_error': meta.get('last_error'),
+        'auto': scheduler.status(),
         'active_account_id': aid,
     })
+
+
+@app.get('/api/auto/status')
+async def api_auto_status():
+    return JSONResponse(scheduler.status())
 
 
 @app.get('/api/admin/coupons')

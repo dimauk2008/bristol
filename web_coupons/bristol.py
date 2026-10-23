@@ -3,12 +3,14 @@ import gzip
 import hashlib
 import html
 import json
+import logging
 import os
 import re
 import shutil
 import ssl
 import subprocess
 import tempfile
+import threading
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -17,11 +19,40 @@ from pathlib import Path
 
 from db import get_conn, get_active_account_id, set_active_account_id
 
+log = logging.getLogger('bristol')
+
 
 # ---------- аккаунты ----------
 
 def _aid(account_id=None) -> int:
     return int(account_id) if account_id is not None else get_active_account_id()
+
+
+_refresh_locks: dict[int, threading.RLock] = {}
+_sync_locks: dict[int, threading.RLock] = {}
+_locks_guard = threading.Lock()
+
+
+def _refresh_lock(aid: int) -> threading.RLock:
+    with _locks_guard:
+        lock = _refresh_locks.get(aid)
+        if lock is None:
+            lock = threading.RLock()
+            _refresh_locks[aid] = lock
+        return lock
+
+
+def _sync_lock(aid: int) -> threading.RLock:
+    with _locks_guard:
+        lock = _sync_locks.get(aid)
+        if lock is None:
+            lock = threading.RLock()
+            _sync_locks[aid] = lock
+        return lock
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _set_meta(account_id, key, value) -> None:
@@ -626,19 +657,31 @@ def _jwt_claim_safe(tok: str, claim: str) -> str:
         return ''
 
 
-def ensure_tokens_from_env(account_id: int = 1) -> bool:
+def ensure_tokens_from_env(account_id: int = 1, overwrite: bool = False) -> bool:
     """Подтянуть токены Бристоля из переменных окружения (если заданы).
 
-    Позволяет работать автономно (Railway/Prod) без ADB и эмулятора:
-    достаточно BRISTOL_REFRESH_TOKEN. Пишет в аккаунт account_id (по умолчанию 1).
+    По умолчанию только заполняет пустой аккаунт: уже сохранённые (и, возможно,
+    ротированные) токены из БД НЕ перетираются устаревшими env-значениями.
+    Принудительно перезаписать можно через overwrite=True или BRISTOL_ENV_TOKEN_OVERWRITE=1.
     """
     env_refresh = (os.environ.get('BRISTOL_REFRESH_TOKEN') or '').strip()
     env_token = (os.environ.get('BRISTOL_TOKEN') or '').strip()
     env_ext = (os.environ.get('BRISTOL_EXTERNAL_ID') or '').strip()
     if not (env_refresh or env_token):
         return False
+    aid = int(account_id)
+    if overwrite or (os.environ.get('BRISTOL_ENV_TOKEN_OVERWRITE') or '').strip() in ('1', 'true', 'yes'):
+        force = True
+    else:
+        force = False
+    if not force:
+        current = _load_tokens(aid)
+        if current.get('refresh_token') or current.get('token'):
+            return False
+    if env_token and _token_expired(env_token):
+        env_token = ''
     ext = env_ext or _jwt_claim_safe(env_token, 'external_id') or _jwt_claim_safe(env_refresh, 'external_id')
-    apply_account_tokens(account_id, refresh_token=env_refresh, token=env_token, external_id=ext)
+    apply_account_tokens(aid, refresh_token=env_refresh, token=env_token, external_id=ext)
     return True
 
 
@@ -658,7 +701,21 @@ def _save_tokens(token: str, refresh: str, account_id=None) -> None:
     _set_meta(aid, 'token', token)
     _set_meta(aid, 'refresh_token', refresh)
     _set_meta(aid, 'external_id', ext)
+    _set_meta(aid, 'token_refreshed_at', _now_iso())
+    _set_meta(aid, 'last_refresh_error', '')
     _account_touch(aid, token=token, refresh_token=refresh, external_id=ext or None)
+
+
+def token_seconds_left(token: str) -> int:
+    claims = _jwt_claims(token)
+    try:
+        return int(claims.get('exp', 0) - datetime.now(timezone.utc).timestamp())
+    except Exception:
+        return 0
+
+
+def set_last_error(account_id, message: str) -> None:
+    _set_meta(_aid(account_id), 'last_error', message or '')
 
 
 
@@ -685,16 +742,54 @@ def _do_refresh(refresh: str, account_id=None) -> dict:
 
 
 def refresh_token(account_id=None) -> str:
-    tokens = _load_tokens(account_id)
-    refresh = tokens.get('refresh_token')
-    if not refresh:
-        raise BristolError('Нет refresh-токена Бристоля.')
-    data = _do_refresh(refresh, account_id)
-    new_access = data.get('access_token')
-    if not new_access:
-        raise BristolError('Бристоль не вернул access_token.')
-    _save_tokens(new_access, data.get('refresh_token') or refresh, account_id)
-    return new_access
+    """Обновить access/refresh токены. Потокобезопасно: параллельные вызовы
+    не расходуют один и тот же refresh-токен дважды (это и приводило к «слёту»)."""
+    aid = _aid(account_id)
+    with _refresh_lock(aid):
+        tokens = _load_tokens(aid)
+        refresh = tokens.get('refresh_token')
+        if not refresh:
+            raise BristolError('Нет refresh-токена Бристоля.')
+        try:
+            data = _do_refresh(refresh, aid)
+        except urllib.error.HTTPError as e:
+            detail = ''
+            try:
+                detail = e.read().decode('utf-8', 'ignore')[:300]
+            except Exception:
+                pass
+            current = _load_tokens(aid)
+            if current.get('refresh_token') and current['refresh_token'] != refresh:
+                current_token = current.get('token') or ''
+                if current_token and not _token_expired(current_token):
+                    return current_token
+            env_refresh = (os.environ.get('BRISTOL_REFRESH_TOKEN') or '').strip()
+            if env_refresh and env_refresh != refresh:
+                try:
+                    rescue = _do_refresh(env_refresh, aid)
+                    rescue_access = rescue.get('access_token')
+                    if rescue_access:
+                        _save_tokens(rescue_access, rescue.get('refresh_token') or env_refresh, aid)
+                        log.warning('account %s: токен восстановлен из BRISTOL_REFRESH_TOKEN', aid)
+                        return rescue_access
+                except Exception:
+                    pass
+            msg = f'HTTP {e.code}' + (f': {detail}' if detail else '')
+            _set_meta(aid, 'last_refresh_error', msg)
+            raise BristolError('Не удалось обновить токен Бристоля (' + msg + ').') from e
+        except BristolError:
+            raise
+        except Exception as e:
+            _set_meta(aid, 'last_refresh_error', str(e))
+            raise BristolError(f'Не удалось обновить токен Бристоля: {e}') from e
+        new_access = data.get('access_token')
+        if not new_access:
+            msg = 'Бристоль не вернул access_token.'
+            _set_meta(aid, 'last_refresh_error', msg)
+            raise BristolError(msg)
+        _save_tokens(new_access, data.get('refresh_token') or refresh, aid)
+        log.info('account %s: токены обновлены (access %ss)', aid, token_seconds_left(new_access))
+        return new_access
 
 
 def seed_from_app(account_id=None) -> str:
@@ -704,25 +799,54 @@ def seed_from_app(account_id=None) -> str:
 
 
 def get_token(force: bool = False, account_id=None) -> str:
-    tokens = _load_tokens(account_id)
+    aid = _aid(account_id)
+    tokens = _load_tokens(aid)
     token = tokens.get('token', '')
     if token and not force and not _token_expired(token):
         return token
-    if tokens.get('refresh_token'):
-        try:
-            return refresh_token(account_id)
-        except BristolError:
-            pass
-    # ADB-посев доступен только локально; в проде (Railway) его нет — работаем по токенам.
-    if account_id is None and _adb_available():
-        try:
-            return seed_from_app(account_id)
-        except BristolError:
-            pass
+    with _refresh_lock(aid):
+        tokens = _load_tokens(aid)
+        token = tokens.get('token', '')
+        if token and not force and not _token_expired(token):
+            return token
+        if tokens.get('refresh_token'):
+            try:
+                return refresh_token(aid)
+            except BristolError:
+                pass
+        # ADB-посев доступен только локально; в проде (Railway) его нет — работаем по токенам.
+        if account_id is None and _adb_available():
+            try:
+                return seed_from_app(account_id)
+            except BristolError:
+                pass
     raise BristolError(
         'Нет токена Бристоля. Укажите BRISTOL_REFRESH_TOKEN в переменных окружения '
         'или синхронизируйте локально (откройте приложение Бристоль).'
     )
+
+
+def keepalive(account_id=None, interval_hours: float = 6.0) -> bool:
+    """Продлить refresh-токен, если он давно не обновлялся.
+
+    Возвращает True, если обновление действительно выполнено.
+    """
+    aid = _aid(account_id)
+    tokens = _load_tokens(aid)
+    if not tokens.get('refresh_token'):
+        return False
+    last = _get_meta(aid, 'token_refreshed_at')
+    if last:
+        try:
+            dt = datetime.fromisoformat(str(last).replace('Z', '+00:00'))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - dt).total_seconds() < interval_hours * 3600:
+                return False
+        except Exception:
+            pass
+    refresh_token(aid)
+    return True
 
 
 
@@ -851,6 +975,12 @@ def _ocr_coupon_meta(coupons: list, local_images: dict) -> dict:
 
 
 def sync(account_id=None) -> dict:
+    aid = _aid(account_id)
+    with _sync_lock(aid):
+        return _sync_impl(aid)
+
+
+def _sync_impl(account_id=None) -> dict:
     aid = _aid(account_id)
     token = get_token(account_id=aid)
     coupons = fetch_coupons(token).get('coupons') or []
@@ -1022,6 +1152,12 @@ def get_card_payload(account_id=None) -> str:
 
 def sync_card_codes(account_id=None) -> dict:
     """Перегенерировать расписание кодов карты с сервера и сохранить."""
+    aid = _aid(account_id)
+    with _sync_lock(aid):
+        return _sync_card_codes_impl(aid)
+
+
+def _sync_card_codes_impl(account_id=None) -> dict:
     aid = _aid(account_id)
     token = get_token(account_id=aid)
     d = generate_card_codes(token)
