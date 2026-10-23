@@ -292,6 +292,33 @@ def _active_grants(account_id=None):
     return out
 
 
+def _discount_value(value):
+    try:
+        return int(float(value))
+    except Exception:
+        return None
+
+
+def _discount_counts(account_id=None) -> list:
+    aid = account_id if account_id is not None else get_active_account_id()
+    try:
+        coupons = bristol.available_bristol_coupons(aid)
+    except Exception:
+        coupons = []
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT number FROM coupon_grants WHERE account_id=?', (aid,))
+    issued = {r['number'] for r in cur.fetchall()}
+    conn.close()
+    counts: dict[int, int] = {}
+    for c in coupons:
+        value = _discount_value(c.get('discount'))
+        if value is None or c.get('number') in issued:
+            continue
+        counts[value] = counts.get(value, 0) + 1
+    return [{'value': k, 'count': counts[k]} for k in sorted(counts, reverse=True)]
+
+
 # ---------- admin panel ----------
 
 @app.get('/', response_class=HTMLResponse)
@@ -317,6 +344,7 @@ async def index(request: Request):
         'coupons': coupons,
         'bristol_meta': bristol_meta,
         'bristol_coupons': bristol_coupons,
+        'discounts': _discount_counts(aid),
         'grants': _active_grants(aid),
         'accounts': bristol.accounts_list(),
         'active_account_id': aid,
@@ -622,6 +650,53 @@ async def create_grant(request: Request):
     conn.commit()
     conn.close()
     return JSONResponse({'token': token, 'number': number, 'url': f'/g/{token}', 'expires_at': expires_at})
+
+
+@app.post('/grants/bulk')
+async def create_grants_bulk(request: Request):
+    """Выдать по одной ссылке на каждый действующий купон выбранной скидки.
+
+    Уже выданные купоны (по этому аккаунту) пропускаются.
+    """
+    body = await request.json()
+    discount = _discount_value(body.get('discount'))
+    if discount is None:
+        return JSONResponse({'error': 'Укажите скидку'}, status_code=400)
+    duration = body.get('duration') or 'none'
+    minutes = DURATIONS.get(duration, 0)
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat() if minutes else None
+    aid = get_active_account_id()
+    coupons = await run_in_threadpool(bristol.available_bristol_coupons, aid)
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT number FROM coupon_grants WHERE account_id=?', (aid,))
+    issued_before = {r['number'] for r in cur.fetchall()}
+
+    matching = [c for c in coupons
+                if _discount_value(c.get('discount')) == discount and c.get('number')]
+    fresh = [c for c in matching if c['number'] not in issued_before]
+    out = []
+    for c in fresh:
+        token = secrets.token_urlsafe(16)
+        cur.execute('INSERT INTO coupon_grants (token, number, active, expires_at, account_id) VALUES (?,?,1,?,?)',
+                    (token, c['number'], expires_at, aid))
+        out.append({
+            'number': c['number'],
+            'title': c.get('title') or c.get('universal_coupon') or c['number'],
+            'discount': discount,
+            'url': f'/g/{token}',
+            'expires_at': expires_at,
+        })
+    conn.commit()
+    conn.close()
+    return JSONResponse({
+        'discount': discount,
+        'duration': duration,
+        'issued': out,
+        'skipped': len(matching) - len(out),
+        'active_total': len(coupons),
+    })
 
 
 @app.post('/grants/{token}/revoke')

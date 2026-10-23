@@ -187,6 +187,38 @@
     </div>
   </div>
 
+  <div class='card mt2'>
+    <div class='sectionhead'>
+      <h2>Массовая выдача по скидке</h2>
+      <span class='spacer'></span>
+      <span class='small muted'>одна ссылка на купон · только действующие · уже выданные пропускаются</span>
+    </div>
+    <div class='row'>
+      <div class='field' style='max-width:220px'>
+        <label>Скидка</label>
+        <select id='bulk-discount'>
+          {% for d in discounts %}<option value='{{d.value}}'>{{d.value}}% — {{d.count}} шт.</option>{% endfor %}
+        </select>
+      </div>
+      <div class='field' style='max-width:200px'>
+        <label>Срок ссылок</label>
+        <select id='bulk-duration'>
+          {% for k, v in durations.items() %}<option value='{{k}}' {% if k=='1h' %}selected{% endif %}>{{v}}</option>{% endfor %}
+        </select>
+      </div>
+      <button class='btn' type='button' onclick="bulkIssue()" {% if not discounts %}disabled{% endif %}>Выдать все ссылки</button>
+    </div>
+    {% if not discounts %}<div class='small muted mt'>Нет действующих купонов со скидкой — дождитесь синхронизации.</div>{% endif %}
+    <div id='bulk-result' class='mt2' style='display:none'>
+      <div class='small' id='bulk-info'></div>
+      <textarea id='bulk-links' rows='8' readonly class='mt' style='font-family:ui-monospace,Consolas,monospace;font-size:12.5px'></textarea>
+      <div class='actions mt' style='justify-content:flex-start'>
+        <button class='btn sm' type='button' onclick="copyBulk()">Скопировать все</button>
+        <button class='btn sm ghost' type='button' onclick="downloadBulk()">Скачать TXT</button>
+      </div>
+    </div>
+  </div>
+
   <div class='cgrid' id='blist'>
     {% for c in bristol_coupons %}
     <div class='ccard' data-search='{{c.number}} {{c.universal_coupon}}'>
@@ -444,6 +476,42 @@ function issueGrant(number){
     .then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); })
     .then(function(d){ copyText(location.origin+d.url,'Ссылка на купон скопирована'); reloadGrants(); })
     .catch(function(){ toast('Не удалось выдать купон', false); });
+}
+function bulkIssue(){
+  var sel=document.getElementById('bulk-discount');
+  if(!sel || !sel.value){ toast('Нет доступных скидок', false); return; }
+  var dur=document.getElementById('bulk-duration');
+  fetch('/grants/bulk',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({discount:parseInt(sel.value,10),duration:dur?dur.value:'1h'})})
+    .then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); })
+    .then(function(d){
+      var urls=(d.issued||[]).map(function(x){return location.origin+x.url;});
+      var box=document.getElementById('bulk-result');
+      var ta=document.getElementById('bulk-links');
+      var info=document.getElementById('bulk-info');
+      ta.value=urls.join('\n');
+      box.style.display=urls.length?'':'none';
+      if(info) info.textContent='Скидка '+d.discount+'%: выдано '+urls.length+
+        ' · пропущено уже выданных: '+d.skipped+' · действующих всего: '+d.active_total;
+      if(urls.length){ toast('Готово: '+urls.length+' ссылок'); } else { toast('Нет новых купонов с этой скидкой', false); }
+      reloadGrants();
+    })
+    .catch(function(){ toast('Не удалось выполнить массовую выдачу', false); });
+}
+function copyBulk(){
+  var ta=document.getElementById('bulk-links'); if(!ta || !ta.value) return;
+  copyText(ta.value,'Ссылки скопированы');
+}
+function downloadBulk(){
+  var ta=document.getElementById('bulk-links'); if(!ta || !ta.value) return;
+  var sel=document.getElementById('bulk-discount');
+  var stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  var blob=new Blob([ta.value],{type:'text/plain;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='coupons-'+(sel?sel.value:'all')+'%-'+stamp+'.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
 }
 function copyGrant(token){ copyText(location.origin+'/g/'+token,'Ссылка скопирована'); }
 function revokeGrant(token){
