@@ -438,47 +438,54 @@ def _ocr_passes(variants):
     return passes
 
 
-def _crop_discount(img3):
-    """Читает крупное число скидки под словом «СКИДКА» по координатам."""
-    if not img3 or not TESSERACT or Image is None:
-        return None
-    sk = num = None
-    for psm in (11, 3, 6, 12):
-        rows = _ocr_tsv(img3, 'rus', psm)
-        s = next((r for r in rows if 'СКИДКА' in r['txt'].upper()), None)
-        if not s:
-            continue
-        below = [r for r in rows if r['t'] > s['t'] + s['h'] * 0.4 and r['h'] > s['h'] * 1.3]
-        if below:
-            sk, num = s, max(below, key=lambda r: r['h'])
-            break
-    if not sk or not num:
+def _pct_values(text):
+    """Все числа с явным знаком % (без угадывания по отдельным цифрам)."""
+    t = text.replace('O', '0').replace('o', '0').replace('З', '3').replace('Э', '3')
+    vals = []
+    for m in re.finditer(r'(\d{1,3})\s*%', t):
+        v = int(m.group(1))
+        if 1 <= v <= 95:
+            vals.append(v)
+    return vals
+
+
+def _crop_discount(png_path):
+    """Читает ТОЛЬКО крупный процент из блока «СКИДКА» слева сверху.
+
+    Область фиксирована и не включает описание товара (там бывают «8,5%», «100%»).
+    Несколько порогов бинаризации + psm 8/13 дают устойчивый результат для шрифта
+    баннеров (в т.ч. «7» не путается с «1»).
+    """
+    if not png_path or not TESSERACT or Image is None:
         return None
     try:
-        im = Image.open(img3)
+        im = Image.open(png_path).convert('RGB')
     except Exception:
         return None
     W, H = im.size
-    left = max(0, int(min(sk['l'], num['l']) - 80))
-    top = max(0, int(num['t'] - 12))
-    right = min(W, int(num['l'] + num['w'] + 160))
-    bot = min(H, int(num['t'] + num['h'] + 20))
-    crop = im.crop((left, top, right, bot))
-    crop = crop.resize((crop.width * 2, crop.height * 2), Image.LANCZOS)
-    tf = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-    tf.close()
-    crop.save(tf.name)
-    try:
-        for psm in (7, 8, 6, 13):
-            v = _first_pct(_ocr_once(tf.name, 'eng', psm, whitelist='0123456789%'))
-            if v is not None:
-                return v
-    finally:
+    crop = im.crop((0, int(H * 0.10), int(W * 0.36), int(H * 0.72)))
+    gray = ImageOps.autocontrast(ImageOps.grayscale(crop))
+    gray = gray.resize((gray.width * 4, gray.height * 4), Image.LANCZOS)
+
+    votes = []
+    for level in (0, 170, 200, 235):
+        img = gray if level == 0 else gray.point(lambda p, l=level: 255 if p > l else 0)
+        tf = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        tf.close()
         try:
-            Path(tf.name).unlink()
-        except Exception:
-            pass
-    return None
+            img.save(tf.name)
+            for psm in (8, 13):
+                txt = _ocr_once(tf.name, 'eng', psm, whitelist='0123456789%')
+                votes.extend(_pct_values(txt))
+        finally:
+            try:
+                Path(tf.name).unlink()
+            except Exception:
+                pass
+    if not votes:
+        return None
+    from collections import Counter
+    return max(Counter(votes).items(), key=lambda kv: kv[1])[0]
 
 
 def _pick_discount(passes):
@@ -518,9 +525,7 @@ def ocr_coupon(png_path):
     variants, tmp_files = _build_variants(png_path)
     try:
         passes = _ocr_passes(variants)
-        discount = _crop_discount(variants.get(3))
-        if discount is None:
-            discount = _pick_discount(passes)
+        discount = _crop_discount(png_path)
         title = _pick_title(passes)
         return discount, title
     finally:

@@ -66,7 +66,7 @@
   "image_url": "/static/img/ALKO34MP0025199.png",
   "actual_start": "2026-10-15T17:23:42.300+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "10-12% БЕЛ. П/СЛ. 0,75Л"
  },
  {
@@ -76,7 +76,7 @@
   "image_url": "/static/img/ALKO34MP0025762.png",
   "actual_start": "2026-10-15T19:23:55.967+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "10-12% БЕЛ. П/СЛ. 0,75Л"
  },
  {
@@ -86,7 +86,7 @@
   "image_url": "/static/img/ALKO34MP0025946.png",
   "actual_start": "2026-10-15T20:01:23.627+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "10-12% БЕЛ. П/СЛ. 0,75Л"
  },
  {
@@ -96,7 +96,7 @@
   "image_url": "/static/img/ALKO35MP0025601.png",
   "actual_start": "2026-10-15T17:41:08.783+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино КРЫМСКИЙ ПОГРЕБОК 10-12% КР. П/СЛ. 0,75Л"
  },
  {
@@ -106,7 +106,7 @@
   "image_url": "/static/img/ALKO35MP0026153.png",
   "actual_start": "2026-10-15T19:31:33.217+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино КРЫМСКИЙ ПОГРЕБОК 10-12% КР. П/СЛ. 0,75Л"
  },
  {
@@ -116,7 +116,7 @@
   "image_url": "/static/img/ALKO35MP0026324.png",
   "actual_start": "2026-10-15T20:14:56.107+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино КРЫМСКИЙ ПОГРЕБОК 10-12% КР. П/СЛ. 0,75Л"
  },
  {
@@ -126,7 +126,7 @@
   "image_url": "/static/img/ALKO36MP0025427.png",
   "actual_start": "2026-10-15T17:19:57.130+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино КРЫМСКИЙ ПОГРЕБОК САПЕРАВИ МЕРЛО 10-12% КР. П/СЛ. 0,75Л"
  },
  {
@@ -136,7 +136,7 @@
   "image_url": "/static/img/ALKO36MP0025907.png",
   "actual_start": "2026-10-15T19:21:17.120+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино КРЫМСКИЙ ПОГРЕБОК САПЕРАВИ МЕРЛО 10-12% КР. П/СЛ. 0,75Л"
  },
  {
@@ -146,7 +146,7 @@
   "image_url": "/static/img/ALKO36MP0026085.png",
   "actual_start": "2026-10-15T20:00:14.110+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино КРЫМСКИЙ ПОГРЕБОК САПЕРАВИ МЕРЛО 10-12% КР. П/СЛ. 0,75Л"
  },
  {
@@ -206,7 +206,7 @@
   "image_url": "/static/img/ALKO39MP0064987.png",
   "actual_start": "2026-10-15T17:14:48.057+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино АНТИФАС 8,5-15% КР. П/СУХ. 0,75Л"
  },
  {
@@ -216,7 +216,7 @@
   "image_url": "/static/img/ALKO39MP0065579.png",
   "actual_start": "2026-10-15T19:18:45.267+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино АНТИФАС 8,5-15% КР. П/СУХ. 0,75Л"
  },
  {
@@ -226,7 +226,7 @@
   "image_url": "/static/img/ALKO39MP0065752.png",
   "actual_start": "2026-10-15T19:56:38.623+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино АНТИФАС 8,5-15% КР. П/СУХ. 0,75Л"
  },
  {
@@ -236,7 +236,7 @@
   "image_url": "/static/img/ALKO40MP0054162.png",
   "actual_start": "2026-10-15T17:06:48.980+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино АНТИФАС 8,5-15% БЕЛ. П/СУХ. 0,75Л"
  },
  {
@@ -246,7 +246,7 @@
   "image_url": "/static/img/ALKO40MP0054761.png",
   "actual_start": "2026-10-15T19:16:36.693+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино АНТИФАС 8,5-15% БЕЛ. П/СУХ. 0,75Л"
  },
  {
@@ -256,7 +256,7 @@
   "image_url": "/static/img/ALKO40MP0054940.png",
   "actual_start": "2026-10-15T19:54:00.937+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино АНТИФАС 8,5-15% БЕЛ. П/СУХ. 0,75Л"
  },
  {
@@ -266,7 +266,7 @@
   "image_url": "/static/img/ALKO41MP0046555.png",
   "actual_start": "2026-10-15T18:57:48.933+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино ТОРОС СЕНТЕНАРО СИРА- МАЛЬБЕК 8,5-15% КР. СУХ. 0,75Л"
  },
  {
@@ -276,7 +276,7 @@
   "image_url": "/static/img/ALKO41MP0046740.png",
   "actual_start": "2026-10-15T19:38:37.713+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино ТОРОС СЕНТЕНАРО СИРА- МАЛЬБЕК 8,5-15% КР. СУХ. 0,75Л"
  },
  {
@@ -286,7 +286,7 @@
   "image_url": "/static/img/ALKO42MP0045508.png",
   "actual_start": "2026-10-15T17:40:14.170+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино ТОРОС СЕНТЕНАРО ШЕНЕН- ТОРРОНТЕС БЕЛ. СУХ. 0,75Л"
  },
  {
@@ -296,7 +296,7 @@
   "image_url": "/static/img/ALKO42MP0045930.png",
   "actual_start": "2026-10-15T19:31:32.000+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино ТОРОС СЕНТЕНАРО ШЕНЕН- ТОРРОНТЕС БЕЛ. СУХ. 0,75Л"
  },
  {
@@ -306,7 +306,7 @@
   "image_url": "/static/img/ALKO42MP0046058.png",
   "actual_start": "2026-10-15T20:09:05.863+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На вино ТОРОС СЕНТЕНАРО ШЕНЕН- ТОРРОНТЕС БЕЛ. СУХ. 0,75Л"
  },
  {
@@ -316,7 +316,7 @@
   "image_url": "/static/img/ALKO43MP0072689.png",
   "actual_start": "2026-10-15T17:27:13.857+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 55,
+  "discount": 35,
   "title": "На сортовое вино МОНТЕУРБАНО ТАННАТ КР. П/СУХ 0,;75Л"
  },
  {
@@ -326,7 +326,7 @@
   "image_url": "/static/img/ALKO43MP0073332.png",
   "actual_start": "2026-10-15T19:26:19.010+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 55,
+  "discount": 35,
   "title": "На сортовое вино МОНТЕУРБАНО ТАННАТ КР. П/СУХ 0,;75Л"
  },
  {
@@ -336,7 +336,7 @@
   "image_url": "/static/img/ALKO43MP0073536.png",
   "actual_start": "2026-10-15T20:01:25.807+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 55,
+  "discount": 35,
   "title": "На сортовое вино МОНТЕУРБАНО ТАННАТ КР. П/СУХ 0,;75Л"
  },
  {
@@ -396,7 +396,7 @@
   "image_url": "/static/img/ALKO46MP0017853.png",
   "actual_start": "2026-10-15T17:49:14.640+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 55,
+  "discount": 35,
   "title": "На сортовое вино БАКИНСКИЙ ДВОРИК МАДРАСА КР. СУХ. 0,75Л"
  },
  {
@@ -406,7 +406,7 @@
   "image_url": "/static/img/ALKO46MP0018314.png",
   "actual_start": "2026-10-15T19:35:42.187+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 55,
+  "discount": 35,
   "title": "На сортовое вино БАКИНСКИЙ ДВОРИК МАДРАСА КР. СУХ. 0,75Л"
  },
  {
@@ -416,7 +416,7 @@
   "image_url": "/static/img/ALKO47MP0048903.png",
   "actual_start": "2026-10-15T17:34:30.307+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 85,
+  "discount": 30,
   "title": "На игристое вино РОККАБАРО ДЖАСТСЕККО 8,5-13,5% БЕЛ. СУХ. 0,75Л"
  },
  {
@@ -426,7 +426,7 @@
   "image_url": "/static/img/ALKO47MP0049338.png",
   "actual_start": "2026-10-15T19:30:46.187+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 85,
+  "discount": 30,
   "title": "На игристое вино РОККАБАРО ДЖАСТСЕККО 8,5-13,5% БЕЛ. СУХ. 0,75Л"
  },
  {
@@ -436,7 +436,7 @@
   "image_url": "/static/img/ALKO47MP0049511.png",
   "actual_start": "2026-10-15T20:06:12.187+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 85,
+  "discount": 30,
   "title": "На игристое вино РОККАБАРО ДЖАСТСЕККО 8,5-13,5% БЕЛ. СУХ. 0,75Л"
  },
  {
@@ -446,7 +446,7 @@
   "image_url": "/static/img/ALKO48MP0036890.png",
   "actual_start": "2026-10-15T18:01:22.263+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино ДАРЕДЖАНИ"
  },
  {
@@ -456,7 +456,7 @@
   "image_url": "/static/img/ALKO48MP0037215.png",
   "actual_start": "2026-10-15T19:37:14.497+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сортовое вино ДАРЕДЖАНИ"
  },
  {
@@ -466,7 +466,7 @@
   "image_url": "/static/img/ALKO49MP0047113.png",
   "actual_start": "2026-10-15T17:31:44.353+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток особый газ. б/а САНТО СТЕФАНО БЬЯНКО БЕЛ. П/СЛ 0,75Л"
  },
  {
@@ -476,7 +476,7 @@
   "image_url": "/static/img/ALKO49MP0047505.png",
   "actual_start": "2026-10-15T19:27:17.487+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток особый газ. б/а САНТО СТЕФАНО БЬЯНКО БЕЛ. П/СЛ 0,75Л"
  },
  {
@@ -486,7 +486,7 @@
   "image_url": "/static/img/ALKO49MP0047653.png",
   "actual_start": "2026-10-15T20:02:29.653+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток особый газ. б/а САНТО СТЕФАНО БЬЯНКО БЕЛ. П/СЛ 0,75Л"
  },
  {
@@ -496,7 +496,7 @@
   "image_url": "/static/img/ALKO50MP0043412.png",
   "actual_start": "2026-10-15T17:45:24.133+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток особый газ. 6/а САНТО СТЕФАНО РОССО КР. П/СЛ 0,75Л"
  },
  {
@@ -506,7 +506,7 @@
   "image_url": "/static/img/ALKO50MP0043765.png",
   "actual_start": "2026-10-15T19:33:00.137+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток особый газ. 6/а САНТО СТЕФАНО РОССО КР. П/СЛ 0,75Л"
  },
  {
@@ -516,7 +516,7 @@
   "image_url": "/static/img/ALKO50MP0043931.png",
   "actual_start": "2026-10-15T20:31:16.103+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток особый газ. 6/а САНТО СТЕФАНО РОССО КР. П/СЛ 0,75Л"
  },
  {
@@ -526,7 +526,7 @@
   "image_url": "/static/img/ALKO51MP0026948.png",
   "actual_start": "2026-10-15T17:21:45.303+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На аперитив САНТО СТЕФАНО РОЗАТО 18,5% 0,75Л"
  },
  {
@@ -536,7 +536,7 @@
   "image_url": "/static/img/ALKO51MP0027725.png",
   "actual_start": "2026-10-15T19:21:39.763+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На аперитив САНТО СТЕФАНО РОЗАТО 18,5% 0,75Л"
  },
  {
@@ -546,7 +546,7 @@
   "image_url": "/static/img/ALKO51MP0027960.png",
   "actual_start": "2026-10-15T20:01:10.273+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На аперитив САНТО СТЕФАНО РОЗАТО 18,5% 0,75Л"
  },
  {
@@ -616,7 +616,7 @@
   "image_url": "/static/img/ALKO54MP0095621.png",
   "actual_start": "2026-10-15T17:17:44.057+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На водку ПЕЧОРА 40% 0,25Л"
  },
  {
@@ -626,7 +626,7 @@
   "image_url": "/static/img/ALKO54MP0096474.png",
   "actual_start": "2026-10-15T19:21:05.857+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На водку ПЕЧОРА 40% 0,25Л"
  },
  {
@@ -636,7 +636,7 @@
   "image_url": "/static/img/ALKO54MP0096712.png",
   "actual_start": "2026-10-15T19:59:50.450+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На водку ПЕЧОРА 40% 0,25Л"
  },
  {
@@ -646,7 +646,7 @@
   "image_url": "/static/img/ALKO55MP0060035.png",
   "actual_start": "2026-10-15T17:25:22.803+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На коктейль СТИРСМЕН"
  },
  {
@@ -656,7 +656,7 @@
   "image_url": "/static/img/ALKO55MP0060787.png",
   "actual_start": "2026-10-15T19:24:42.650+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На коктейль СТИРСМЕН"
  },
  {
@@ -666,7 +666,7 @@
   "image_url": "/static/img/ALKO55MP0061034.png",
   "actual_start": "2026-10-15T20:01:24.650+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На коктейль СТИРСМЕН"
  },
  {
@@ -676,7 +676,7 @@
   "image_url": "/static/img/ALKO55MP0061036.png",
   "actual_start": "2026-10-15T20:01:24.730+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На коктейль СТИРСМЕН"
  },
  {
@@ -686,7 +686,7 @@
   "image_url": "/static/img/ALKO56MP0060037.png",
   "actual_start": "2026-10-15T17:23:20.110+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "А *Акция не действует в Респ. Татарстан"
  },
  {
@@ -696,7 +696,7 @@
   "image_url": "/static/img/ALKO56MP0060868.png",
   "actual_start": "2026-10-15T19:23:33.243+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "А *Акция не действует в Респ. Татарстан"
  },
  {
@@ -706,7 +706,7 @@
   "image_url": "/static/img/ALKO56MP0061105.png",
   "actual_start": "2026-10-15T20:01:23.363+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "А *Акция не действует в Респ. Татарстан"
  },
  {
@@ -716,7 +716,7 @@
   "image_url": "/static/img/ALKO56MP0061106.png",
   "actual_start": "2026-10-15T20:01:23.453+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "А *Акция не действует в Респ. Татарстан"
  },
  {
@@ -756,7 +756,7 @@
   "image_url": "/static/img/FOOD101MP034631.png",
   "actual_start": "2026-10-15T17:28:55.623+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сливки"
  },
  {
@@ -766,7 +766,7 @@
   "image_url": "/static/img/FOOD101MP035204.png",
   "actual_start": "2026-10-15T19:27:05.863+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сливки"
  },
  {
@@ -776,7 +776,7 @@
   "image_url": "/static/img/FOOD101MP035357.png",
   "actual_start": "2026-10-15T20:01:27.763+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сливки"
  },
  {
@@ -786,7 +786,7 @@
   "image_url": "/static/img/FOOD101MP035360.png",
   "actual_start": "2026-10-15T20:01:27.903+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сливки"
  },
  {
@@ -856,7 +856,7 @@
   "image_url": "/static/img/FOOD104MP044790.png",
   "actual_start": "2026-10-15T17:31:47.940+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сыр СОЛОМКА"
  },
  {
@@ -866,7 +866,7 @@
   "image_url": "/static/img/FOOD104MP045211.png",
   "actual_start": "2026-10-15T19:28:46.967+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сыр СОЛОМКА"
  },
  {
@@ -876,7 +876,7 @@
   "image_url": "/static/img/FOOD104MP045341.png",
   "actual_start": "2026-10-15T20:04:13.110+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На сыр СОЛОМКА"
  },
  {
@@ -886,7 +886,7 @@
   "image_url": "/static/img/FOOD105MP032036.png",
   "actual_start": "2026-10-15T17:39:50.717+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА АЛЬПИЙСКАЯ СМЕТАНА С ЛУКОМ 60Г"
  },
  {
@@ -896,7 +896,7 @@
   "image_url": "/static/img/FOOD105MP032579.png",
   "actual_start": "2026-10-15T19:31:31.630+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА АЛЬПИЙСКАЯ СМЕТАНА С ЛУКОМ 60Г"
  },
  {
@@ -906,7 +906,7 @@
   "image_url": "/static/img/FOOD105MP032765.png",
   "actual_start": "2026-10-15T20:08:54.500+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА АЛЬПИЙСКАЯ СМЕТАНА С ЛУКОМ 60Г"
  },
  {
@@ -916,7 +916,7 @@
   "image_url": "/static/img/FOOD106MP045800.png",
   "actual_start": "2026-10-15T17:26:44.460+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ЧЕСНОК 60Г"
  },
  {
@@ -926,7 +926,7 @@
   "image_url": "/static/img/FOOD106MP046398.png",
   "actual_start": "2026-10-15T19:26:06.940+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ЧЕСНОК 60Г"
  },
  {
@@ -936,7 +936,7 @@
   "image_url": "/static/img/FOOD106MP046581.png",
   "actual_start": "2026-10-15T20:01:25.633+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ЧЕСНОК 60Г"
  },
  {
@@ -946,7 +946,7 @@
   "image_url": "/static/img/FOOD107MP044820.png",
   "actual_start": "2026-10-15T17:47:01.237+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ОСТРЫЕ КРЫЛЫЬШКИ 60Г"
  },
  {
@@ -956,7 +956,7 @@
   "image_url": "/static/img/FOOD107MP045205.png",
   "actual_start": "2026-10-15T19:33:45.303+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ОСТРЫЕ КРЫЛЫЬШКИ 60Г"
  },
  {
@@ -966,7 +966,7 @@
   "image_url": "/static/img/FOOD107MP045396.png",
   "actual_start": "2026-10-15T20:31:16.770+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ОСТРЫЕ КРЫЛЫЬШКИ 60Г"
  },
  {
@@ -976,7 +976,7 @@
   "image_url": "/static/img/FOOD108MP045404.png",
   "actual_start": "2026-10-15T17:35:49.610+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА СТЕЙК 60Г"
  },
  {
@@ -986,7 +986,7 @@
   "image_url": "/static/img/FOOD108MP046094.png",
   "actual_start": "2026-10-15T19:31:28.993+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА СТЕЙК 60Г"
  },
  {
@@ -996,7 +996,7 @@
   "image_url": "/static/img/FOOD108MP046096.png",
   "actual_start": "2026-10-15T19:31:29.103+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА СТЕЙК 60Г"
  },
  {
@@ -1006,7 +1006,7 @@
   "image_url": "/static/img/FOOD108MP046364.png",
   "actual_start": "2026-10-15T20:06:47.610+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА СТЕЙК 60Г"
  },
  {
@@ -1016,7 +1016,7 @@
   "image_url": "/static/img/FOOD109MP033049.png",
   "actual_start": "2026-10-15T17:45:11.517+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ВАВ УЕВЗЮМ ЧЕСНОК 100Г"
  },
  {
@@ -1026,7 +1026,7 @@
   "image_url": "/static/img/FOOD109MP033642.png",
   "actual_start": "2026-10-15T19:31:34.360+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ВАВ УЕВЗЮМ ЧЕСНОК 100Г"
  },
  {
@@ -1036,7 +1036,7 @@
   "image_url": "/static/img/FOOD109MP033643.png",
   "actual_start": "2026-10-15T19:31:34.493+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ВАВ УЕВЗЮМ ЧЕСНОК 100Г"
  },
  {
@@ -1046,7 +1046,7 @@
   "image_url": "/static/img/FOOD109MP033928.png",
   "actual_start": "2026-10-15T20:31:15.530+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На гренки ФИШКА ВАВ УЕВЗЮМ ЧЕСНОК 100Г"
  },
  {
@@ -1056,7 +1056,7 @@
   "image_url": "/static/img/FOOD110MP045212.png",
   "actual_start": "2026-10-15T17:31:47.250+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На кофе растворимый МШАСВО ВЕКАС!О РЕЦОХЕ 50Г"
  },
  {
@@ -1066,7 +1066,7 @@
   "image_url": "/static/img/FOOD110MP045213.png",
   "actual_start": "2026-10-15T17:31:47.363+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На кофе растворимый МШАСВО ВЕКАС!О РЕЦОХЕ 50Г"
  },
  {
@@ -1076,7 +1076,7 @@
   "image_url": "/static/img/FOOD110MP045704.png",
   "actual_start": "2026-10-15T19:28:15.140+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На кофе растворимый МШАСВО ВЕКАС!О РЕЦОХЕ 50Г"
  },
  {
@@ -1086,7 +1086,7 @@
   "image_url": "/static/img/FOOD110MP045843.png",
   "actual_start": "2026-10-15T20:03:14.690+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На кофе растворимый МШАСВО ВЕКАС!О РЕЦОХЕ 50Г"
  },
  {
@@ -1156,7 +1156,7 @@
   "image_url": "/static/img/FOOD51MP0072669.png",
   "actual_start": "2026-10-15T17:38:02.693+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На жевательную резинку ЕСЫР$Е ЛЕДЯНАЯ ЯГОДА 13,6Г"
  },
  {
@@ -1166,7 +1166,7 @@
   "image_url": "/static/img/FOOD51MP0073301.png",
   "actual_start": "2026-10-15T19:31:30.090+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На жевательную резинку ЕСЫР$Е ЛЕДЯНАЯ ЯГОДА 13,6Г"
  },
  {
@@ -1176,7 +1176,7 @@
   "image_url": "/static/img/FOOD51MP0073498.png",
   "actual_start": "2026-10-15T20:07:43.217+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На жевательную резинку ЕСЫР$Е ЛЕДЯНАЯ ЯГОДА 13,6Г"
  },
  {
@@ -1386,7 +1386,7 @@
   "image_url": "/static/img/FOOD63MP0033767.png",
   "actual_start": "2026-10-15T19:05:13.137+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток Е"
  },
  {
@@ -1396,7 +1396,7 @@
   "image_url": "/static/img/FOOD63MP0033899.png",
   "actual_start": "2026-10-15T19:43:22.067+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток Е"
  },
  {
@@ -1406,7 +1406,7 @@
   "image_url": "/static/img/FOOD64MP0033359.png",
   "actual_start": "2026-10-15T18:01:22.963+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 5,
+  "discount": 30,
   "title": "На напиток ДОБРЫЙ КОЛА БЕЗ САХАРА 1Л"
  },
  {
@@ -1416,7 +1416,7 @@
   "image_url": "/static/img/FOOD64MP0033737.png",
   "actual_start": "2026-10-15T19:37:27.007+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 5,
+  "discount": 30,
   "title": "На напиток ДОБРЫЙ КОЛА БЕЗ САХАРА 1Л"
  },
  {
@@ -1426,7 +1426,7 @@
   "image_url": "/static/img/FOOD66MP0017959.png",
   "actual_start": "2026-10-15T19:08:38.967+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток Р!СН"
  },
  {
@@ -1436,7 +1436,7 @@
   "image_url": "/static/img/FOOD66MP0018085.png",
   "actual_start": "2026-10-15T19:47:17.530+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток Р!СН"
  },
  {
@@ -1466,7 +1466,7 @@
   "image_url": "/static/img/FOOD71MP0017522.png",
   "actual_start": "2026-10-15T17:49:55.420+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На нектар Р!СН"
  },
  {
@@ -1476,7 +1476,7 @@
   "image_url": "/static/img/FOOD73MP0017554.png",
   "actual_start": "2026-10-15T19:12:00.800+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток ДОБРЫЙ АПЕЛЬСИН 2Л"
  },
  {
@@ -1486,7 +1486,7 @@
   "image_url": "/static/img/FOOD73MP0017678.png",
   "actual_start": "2026-10-15T19:50:19.820+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток ДОБРЫЙ АПЕЛЬСИН 2Л"
  },
  {
@@ -1496,7 +1496,7 @@
   "image_url": "/static/img/FOOD74MP0018524.png",
   "actual_start": "2026-10-15T17:45:34.477+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток ДОБРЫЙ ЛИМОН-ЛАЙМ 2Л"
  },
  {
@@ -1506,7 +1506,7 @@
   "image_url": "/static/img/FOOD74MP0018975.png",
   "actual_start": "2026-10-15T19:33:10.467+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток ДОБРЫЙ ЛИМОН-ЛАЙМ 2Л"
  },
  {
@@ -1516,7 +1516,7 @@
   "image_url": "/static/img/FOOD74MP0019178.png",
   "actual_start": "2026-10-15T20:31:16.263+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На напиток ДОБРЫЙ ЛИМОН-ЛАЙМ 2Л"
  },
  {
@@ -1556,7 +1556,7 @@
   "image_url": "/static/img/FOOD76MP0015271.png",
   "actual_start": "2026-10-15T17:09:30.217+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "ВУРМ ОРИГИНАЛЬНЫЙ 0,449Л \\ ” \\"
  },
  {
@@ -1566,7 +1566,7 @@
   "image_url": "/static/img/FOOD76MP0015272.png",
   "actual_start": "2026-10-15T17:09:30.923+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "ВУРМ ОРИГИНАЛЬНЫЙ 0,449Л \\ ” \\"
  },
  {
@@ -1576,7 +1576,7 @@
   "image_url": "/static/img/FOOD76MP0015273.png",
   "actual_start": "2026-10-15T17:09:31.403+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "ВУРМ ОРИГИНАЛЬНЫЙ 0,449Л \\ ” \\"
  },
  {
@@ -1586,7 +1586,7 @@
   "image_url": "/static/img/FOOD76MP0015434.png",
   "actual_start": "2026-10-15T19:18:01.320+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "ВУРМ ОРИГИНАЛЬНЫЙ 0,449Л \\ ” \\"
  },
  {
@@ -1596,7 +1596,7 @@
   "image_url": "/static/img/FOOD76MP0015493.png",
   "actual_start": "2026-10-15T19:54:46.763+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "ВУРМ ОРИГИНАЛЬНЫЙ 0,449Л \\ ” \\"
  },
  {
@@ -1606,7 +1606,7 @@
   "image_url": "/static/img/FOOD77MP0015171.png",
   "actual_start": "2026-10-15T17:17:05.757+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На энергетический ый ВУЕМ ЕМЕРСУ ОМК 0,449Л"
  },
  {
@@ -1616,7 +1616,7 @@
   "image_url": "/static/img/FOOD77MP0015285.png",
   "actual_start": "2026-10-15T19:20:13.407+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На энергетический ый ВУЕМ ЕМЕРСУ ОМК 0,449Л"
  },
  {
@@ -1626,7 +1626,7 @@
   "image_url": "/static/img/FOOD77MP0015332.png",
   "actual_start": "2026-10-15T19:57:17.920+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На энергетический ый ВУЕМ ЕМЕРСУ ОМК 0,449Л"
  },
  {
@@ -1636,7 +1636,7 @@
   "image_url": "/static/img/FOOD78MP0015303.png",
   "actual_start": "2026-10-15T17:22:40.883+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На энергетический напиток ВУВМ ЕМ ОЮМК АПЕЛЬСИНОВЫЙ МИКС 0,449Л"
  },
  {
@@ -1646,7 +1646,7 @@
   "image_url": "/static/img/FOOD78MP0015438.png",
   "actual_start": "2026-10-15T19:21:51.200+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На энергетический напиток ВУВМ ЕМ ОЮМК АПЕЛЬСИНОВЫЙ МИКС 0,449Л"
  },
  {
@@ -1656,7 +1656,7 @@
   "image_url": "/static/img/FOOD78MP0015489.png",
   "actual_start": "2026-10-15T20:01:20.197+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 50,
+  "discount": 30,
   "title": "На энергетический напиток ВУВМ ЕМ ОЮМК АПЕЛЬСИНОВЫЙ МИКС 0,449Л"
  },
  {
@@ -1666,7 +1666,7 @@
   "image_url": "/static/img/FOOD80MP0017874.png",
   "actual_start": "2026-10-15T19:08:16.203+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ВСН КОКТЕЙЛЬ АПЕРИТИВО СПРИТЦ 1Л"
  },
  {
@@ -1676,7 +1676,7 @@
   "image_url": "/static/img/FOOD80MP0017987.png",
   "actual_start": "2026-10-15T19:46:54.133+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ВСН КОКТЕЙЛЬ АПЕРИТИВО СПРИТЦ 1Л"
  },
  {
@@ -1686,7 +1686,7 @@
   "image_url": "/static/img/FOOD81MP0066801.png",
   "actual_start": "2026-10-15T19:12:22.620+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 70,
   "title": "He Gonee 1 wT. 8 Yexe"
  },
  {
@@ -1696,7 +1696,7 @@
   "image_url": "/static/img/FOOD81MP0066999.png",
   "actual_start": "2026-10-15T19:51:23.613+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 70,
   "title": "He Gonee 1 wT. 8 Yexe"
  },
  {
@@ -1706,7 +1706,7 @@
   "image_url": "/static/img/FOOD82MP0017514.png",
   "actual_start": "2026-10-15T17:38:24.477+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 70,
   "title": "МАНДАРИН 0,33Л \"ик }"
  },
  {
@@ -1716,7 +1716,7 @@
   "image_url": "/static/img/FOOD82MP0017804.png",
   "actual_start": "2026-10-15T19:31:30.530+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 70,
   "title": "МАНДАРИН 0,33Л \"ик }"
  },
  {
@@ -1726,7 +1726,7 @@
   "image_url": "/static/img/FOOD82MP0017910.png",
   "actual_start": "2026-10-15T20:08:16.857+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 70,
   "title": "МАНДАРИН 0,33Л \"ик }"
  },
  {
@@ -1736,7 +1736,7 @@
   "image_url": "/static/img/FOOD83MP0017817.png",
   "actual_start": "2026-10-15T19:06:30.583+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток РСН ТОНИК ©} ГРАНАТ 0,355Л"
  },
  {
@@ -1746,7 +1746,7 @@
   "image_url": "/static/img/FOOD83MP0017935.png",
   "actual_start": "2026-10-15T19:44:42.130+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток РСН ТОНИК ©} ГРАНАТ 0,355Л"
  },
  {
@@ -1756,7 +1756,7 @@
   "image_url": "/static/img/FOOD84MP0013917.png",
   "actual_start": "2026-10-15T19:13:15.827+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 21,
+  "discount": 70,
   "title": "На сокосодержащий напиток ДОБРЫЙ АПЕЛЬСИН, МАНДАРИН 2Л"
  },
  {
@@ -1766,7 +1766,7 @@
   "image_url": "/static/img/FOOD84MP0014016.png",
   "actual_start": "2026-10-15T19:52:02.860+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 21,
+  "discount": 70,
   "title": "На сокосодержащий напиток ДОБРЫЙ АПЕЛЬСИН, МАНДАРИН 2Л"
  },
  {
@@ -1776,7 +1776,7 @@
   "image_url": "/static/img/FOOD86MP0017539.png",
   "actual_start": "2026-10-15T19:10:28.260+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ДОБРЫЙ РИУЁЕРУ [, АПЕЛЬСИН 0,45Л ыы"
  },
  {
@@ -1786,7 +1786,7 @@
   "image_url": "/static/img/FOOD86MP0017657.png",
   "actual_start": "2026-10-15T19:48:51.737+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ДОБРЫЙ РИУЁЕРУ [, АПЕЛЬСИН 0,45Л ыы"
  },
  {
@@ -1806,7 +1806,7 @@
   "image_url": "/static/img/FOOD93MP0018036.png",
   "actual_start": "2026-10-15T19:03:32.243+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ДОБРЫЙ РИЁРУ ТРОПИЧЕСКИИ 0,45Л"
  },
  {
@@ -1816,7 +1816,7 @@
   "image_url": "/static/img/FOOD93MP0018168.png",
   "actual_start": "2026-10-15T19:41:51.093+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ДОБРЫЙ РИЁРУ ТРОПИЧЕСКИИ 0,45Л"
  },
  {
@@ -1826,7 +1826,7 @@
   "image_url": "/static/img/FOOD94MP0017425.png",
   "actual_start": "2026-10-15T17:28:09.100+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ДОБРЫЙ РУЁРУ ВИШНЯ 0,45Л 1"
  },
  {
@@ -1836,7 +1836,7 @@
   "image_url": "/static/img/FOOD94MP0017759.png",
   "actual_start": "2026-10-15T19:26:40.060+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ДОБРЫЙ РУЁРУ ВИШНЯ 0,45Л 1"
  },
  {
@@ -1846,7 +1846,7 @@
   "image_url": "/static/img/FOOD94MP0017875.png",
   "actual_start": "2026-10-15T20:01:26.543+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На напиток ДОБРЫЙ РУЁРУ ВИШНЯ 0,45Л 1"
  },
  {
@@ -1856,7 +1856,7 @@
   "image_url": "/static/img/FOOD95MP0017639.png",
   "actual_start": "2026-10-15T17:31:45.400+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На сок ДОБРЫЙ АКТМ КО 0,2Л"
  },
  {
@@ -1866,7 +1866,7 @@
   "image_url": "/static/img/FOOD95MP0017999.png",
   "actual_start": "2026-10-15T19:27:40.547+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На сок ДОБРЫЙ АКТМ КО 0,2Л"
  },
  {
@@ -1876,7 +1876,7 @@
   "image_url": "/static/img/FOOD95MP0018131.png",
   "actual_start": "2026-10-15T20:02:41.510+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На сок ДОБРЫЙ АКТМ КО 0,2Л"
  },
  {
@@ -1886,7 +1886,7 @@
   "image_url": "/static/img/FOOD96MP0017896.png",
   "actual_start": "2026-10-15T19:11:15.540+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На сок ДОБРЫЙ МУЛЬТИФРУКТ АКТМ КО 0,2Л"
  },
  {
@@ -1896,7 +1896,7 @@
   "image_url": "/static/img/FOOD96MP0018047.png",
   "actual_start": "2026-10-15T19:49:26.267+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На сок ДОБРЫЙ МУЛЬТИФРУКТ АКТМ КО 0,2Л"
  },
  {
@@ -1926,7 +1926,7 @@
   "image_url": "/static/img/FOOD98MP0017529.png",
   "actual_start": "2026-10-15T17:43:02.280+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На воду ВОМАОЧА \\ ‹ 0,5Л ‚р"
  },
  {
@@ -1936,7 +1936,7 @@
   "image_url": "/static/img/FOOD98MP0017832.png",
   "actual_start": "2026-10-15T19:31:33.440+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На воду ВОМАОЧА \\ ‹ 0,5Л ‚р"
  },
  {
@@ -1946,7 +1946,7 @@
   "image_url": "/static/img/FOOD98MP0017976.png",
   "actual_start": "2026-10-15T20:31:14.867+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На воду ВОМАОЧА \\ ‹ 0,5Л ‚р"
  },
  {
@@ -1956,7 +1956,7 @@
   "image_url": "/static/img/FOOD98MP0017979.png",
   "actual_start": "2026-10-15T20:31:14.937+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На воду ВОМАОЧА \\ ‹ 0,5Л ‚р"
  },
  {
@@ -1966,7 +1966,7 @@
   "image_url": "/static/img/FOOD98MP0017981.png",
   "actual_start": "2026-10-15T20:31:15.003+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На воду ВОМАОЧА \\ ‹ 0,5Л ‚р"
  },
  {
@@ -1976,7 +1976,7 @@
   "image_url": "/static/img/FOOD98MP0017982.png",
   "actual_start": "2026-10-15T20:31:15.070+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На воду ВОМАОЧА \\ ‹ 0,5Л ‚р"
  },
  {
@@ -2246,7 +2246,7 @@
   "image_url": "/static/img/PIVO109MP145721.png",
   "actual_start": "2026-10-15T16:27:37.190+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 40,
   "title": "У ШОВИЦЕ"
  },
  {
@@ -2256,7 +2256,7 @@
   "image_url": "/static/img/PIVO109MP147545.png",
   "actual_start": "2026-10-15T19:14:48.163+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 40,
   "title": "У ШОВИЦЕ"
  },
  {
@@ -2266,7 +2266,7 @@
   "image_url": "/static/img/PIVO109MP147968.png",
   "actual_start": "2026-10-15T19:52:30.780+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": null,
+  "discount": 40,
   "title": "У ШОВИЦЕ"
  },
  {
@@ -2336,7 +2336,7 @@
   "image_url": "/static/img/PIVO116MP017608.png",
   "actual_start": "2026-10-15T17:46:08.517+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "ИЗ БОЧОНКА МЕДОВОЕ СВЕТЛОЕ 0"
  },
  {
@@ -2346,7 +2346,7 @@
   "image_url": "/static/img/PIVO116MP017973.png",
   "actual_start": "2026-10-15T19:33:21.673+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "ИЗ БОЧОНКА МЕДОВОЕ СВЕТЛОЕ 0"
  },
  {
@@ -2356,7 +2356,7 @@
   "image_url": "/static/img/PIVO116MP018129.png",
   "actual_start": "2026-10-15T20:31:16.383+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "ИЗ БОЧОНКА МЕДОВОЕ СВЕТЛОЕ 0"
  },
  {
@@ -2386,7 +2386,7 @@
   "image_url": "/static/img/PIVO120MP014034.png",
   "actual_start": "2026-10-15T19:06:09.627+03:00",
   "actual_end": "2026-10-23T00:00:00.000+03:00",
-  "discount": 10,
+  "discount": 70,
   "title": "На пиво ГО\\ММУЕМВРАЧ ОРИГИНА СВЕТЛОЕ 0,45-0,5Л"
  },
  {
