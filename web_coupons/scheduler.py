@@ -109,7 +109,7 @@ async def start() -> None:
         log.info('автообновление отключено (BRISTOL_AUTO_REFRESH=0)')
         return
     keepalive_min = _minutes('BRISTOL_KEEPALIVE_MIN', 360)
-    sync_min = _minutes('BRISTOL_AUTO_SYNC_MIN', 360)
+    sync_min = _minutes('BRISTOL_AUTO_SYNC_MIN', 10)
     _state.update(enabled=True, started_at=_now(),
                   keepalive_min=keepalive_min, sync_min=sync_min)
     if keepalive_min > 0:

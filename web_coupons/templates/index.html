@@ -507,8 +507,9 @@ function poll(){
       var aut=d.auto||{};
       if(!aut.enabled){ ast.textContent='автообновление выключено'; }
       else {
-        var parts=['токен каждые '+Math.round(aut.keepalive_min/60)+' ч'];
-        if(aut.sync_min>0) parts.push('купоны каждые '+Math.round(aut.sync_min/60)+' ч');
+        var fmtMin=function(m){ return m>=60 ? Math.round(m/60)+' ч' : Math.round(m)+' мин'; };
+        var parts=['токен каждые '+fmtMin(aut.keepalive_min)];
+        if(aut.sync_min>0) parts.push('купоны каждые '+fmtMin(aut.sync_min));
         if(aut.last_refresh){ parts.push('обновлён '+new Date(aut.last_refresh).toLocaleTimeString('ru-RU')); }
         ast.textContent=parts.join(' · ');
         ast.style.color=aut.last_error?'#b42318':'';
