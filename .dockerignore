@@ -1,0 +1,35 @@
+# контекст сборки: в образ попадает только web_coupons
+app/
+capture/
+game_auto/
+shop_bot/
+farm_bot/
+
+.env
+.env.*
+**/.env
+**/__pycache__/
+**/*.py[cod]
+**/*.log
+**/*.err
+**/*.pid
+.git/
+.gitignore
+.venv/
+venv/
+
+# секреты и локальные данные
+cookies.json
+**/*.db
+**/*.db-*
+capture/
+web_coupons/coupons.db
+web_coupons/bristol_prefs.xml
+web_coupons/server.log
+web_coupons/server.err.log
+
+# необязательные артефакты
+mir_skidok.html
+Qwen_*.html
+_adb_*.png
+_screens/
