@@ -4,9 +4,10 @@ from __future__ import annotations
 import json
 import sys
 from collections import Counter
+from pathlib import Path
 from urllib.parse import urlsplit
 
-FLOWS = r"D:\avito-call\capture\flows\flows.jsonl"
+FLOWS = str(Path(__file__).parent / "flows" / "flows.jsonl")
 
 
 def main() -> None:

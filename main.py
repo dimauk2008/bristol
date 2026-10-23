@@ -1,6 +1,6 @@
 """Точка входа для PaaS-хостингов: uvicorn main:app / python main.py.
 
-Запускает панель Bristol (web_coupons), а не архивный Avito-трекер.
+Запускает панель Bristol (web_coupons).
 """
 import os
 

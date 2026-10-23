@@ -1,16 +1,13 @@
-__pycache__/
+﻿__pycache__/
 *.py[cod]
 .venv/
 venv/
 
-# --- БД и локальное состояние (не коммитить) ---
-avito.db
-avito.db-*
-avito.db.bak
+# --- Р‘Р” Рё Р»РѕРєР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ (РЅРµ РєРѕРјРјРёС‚РёС‚СЊ) ---
 coupons.db
 coupons.db-*
 
-# --- Секреты/токены ---
+# --- РЎРµРєСЂРµС‚С‹/С‚РѕРєРµРЅС‹ ---
 cookies.json
 bristol_prefs.xml
 capture/flutter_prefs.xml
@@ -19,10 +16,10 @@ capture/credentials.json
 capture/hive.hive
 .env
 
-# --- временные тестовые БД ---
+# --- РІСЂРµРјРµРЅРЅС‹Рµ С‚РµСЃС‚РѕРІС‹Рµ Р‘Р” ---
 capture/_*.sqlite
 
-# --- Крупные бинарники и артефакты ---
+# --- РљСЂСѓРїРЅС‹Рµ Р±РёРЅР°СЂРЅРёРєРё Рё Р°СЂС‚РµС„Р°РєС‚С‹ ---
 capture/bristol.apk
 capture/flows/
 capture/bundle/
@@ -34,7 +31,7 @@ ref_card.png
 _dm_sample.png
 _ocrtmp/
 
-# --- Логи/пидашники ---
+# --- Р›РѕРіРё/РїРёРґР°С€РЅРёРєРё ---
 *.log
 *.err
 *.pid

@@ -1,5 +1,4 @@
-# контекст сборки: в образ попадает только web_coupons
-app/
+﻿# РєРѕРЅС‚РµРєСЃС‚ СЃР±РѕСЂРєРё: РІ РѕР±СЂР°Р· РїРѕРїР°РґР°РµС‚ С‚РѕР»СЊРєРѕ web_coupons
 capture/
 game_auto/
 shop_bot/
@@ -18,7 +17,7 @@ farm_bot/
 .venv/
 venv/
 
-# секреты и локальные данные
+# СЃРµРєСЂРµС‚С‹ Рё Р»РѕРєР°Р»СЊРЅС‹Рµ РґР°РЅРЅС‹Рµ
 cookies.json
 **/*.db
 **/*.db-*
@@ -28,7 +27,7 @@ web_coupons/bristol_prefs.xml
 web_coupons/server.log
 web_coupons/server.err.log
 
-# необязательные артефакты
+# РЅРµРѕР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ Р°СЂС‚РµС„Р°РєС‚С‹
 mir_skidok.html
 Qwen_*.html
 _adb_*.png
