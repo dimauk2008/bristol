@@ -26,6 +26,9 @@ import bristol
 import scheduler
 from bristol import BristolError
 
+# Farm9 web control
+from farm9_web import farm9_controller
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -872,3 +875,76 @@ async def public_claim_coupon(session_id: str, code: str):
     conn.commit()
     conn.close()
     return RedirectResponse(url=f'/s/{session_id}/coupon/{code}', status_code=status.HTTP_303_SEE_OTHER)
+
+
+# ============================================================
+# FARM9 BOT CONTROL
+# ============================================================
+
+@app.get('/farm9', response_class=HTMLResponse)
+async def farm9_page(request: Request):
+    """Farm9 bot control page."""
+    if not _is_admin(request):
+        return RedirectResponse('/login', status_code=status.HTTP_303_SEE_OTHER)
+    return templates.TemplateResponse(request, 'farm9.html', {
+        'stats': farm9_controller.get_stats(),
+    })
+
+
+@app.post('/api/farm9/start')
+async def farm9_start(request: Request):
+    """Start the farm9 bot."""
+    if not _is_admin(request):
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    
+    body = await request.json()
+    minutes = float(body.get('minutes', 0) or 0)
+    target = int(body.get('target', 0) or 0)
+    attempt_type = body.get('attempt_type', 'paid')
+    version = body.get('version', 'promo')
+    creds_file = body.get('creds_file', 'credentials.account5.json')
+    delay = body.get('delay')
+    gift_min = body.get('gift_min')
+    
+    if farm9_controller.is_running:
+        return JSONResponse({'error': 'Бот уже запущен'}, status_code=400)
+    
+    await farm9_controller.start(
+        minutes=minutes,
+        target=target,
+        attempt_type=attempt_type,
+        version=version,
+        creds_file=creds_file,
+        delay=delay,
+        gift_min=gift_min,
+    )
+    return JSONResponse({'ok': True})
+
+
+@app.post('/api/farm9/stop')
+async def farm9_stop(request: Request):
+    """Stop the farm9 bot."""
+    if not _is_admin(request):
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    
+    await farm9_controller.stop()
+    return JSONResponse({'ok': True})
+
+
+@app.get('/api/farm9/stats')
+async def farm9_stats(request: Request):
+    """Get current farm9 stats."""
+    if not _is_admin(request):
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    
+    return JSONResponse(farm9_controller.get_stats())
+
+
+@app.get('/api/farm9/logs')
+async def farm9_logs(request: Request, since: int = 0):
+    """Get farm9 logs since index."""
+    if not _is_admin(request):
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    
+    logs = farm9_controller.get_logs(since)
+    return JSONResponse({'logs': logs, 'total': len(farm9_controller._log_buffer)})

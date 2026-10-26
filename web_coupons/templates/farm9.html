@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}Farm9 Bot Control{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>🤖 Farm9 Bot Control</h1>
+        <p class="text-muted">Управление фармером купонов collect-the-bag</p>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Управление</h5>
+        </div>
+        <div class="card-body">
+            <form id="startForm" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Версия стратегии</label>
+                    <select class="form-select" id="version" name="version">
+                        <option value="promo" selected>v3 Promo — цель: промо-клик</option>
+                        <option value="max">v2 Max — до 2-го проигрыша</option>
+                        <option value="baseline">v1 Baseline — до безопасного максимума</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Тип попытки</label>
+                    <select class="form-select" id="attempt_type" name="attempt_type">
+                        <option value="paid" selected>Платные</option>
+                        <option value="free">Бесплатные</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Время (мин)</label>
+                    <input type="number" class="form-control" id="minutes" name="minutes" min="0" step="1" value="0" placeholder="0 = бесконечно">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Целевой баланс</label>
+                    <input type="number" class="form-control" id="target" name="target" min="0" step="100" value="0" placeholder="0 = нет цели">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Файл кредов</label>
+                    <input type="text" class="form-control" id="creds_file" name="creds_file" value="credentials.account5.json">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Задержка</label>
+                    <input type="number" class="form-control" id="delay" name="delay" min="0" step="0.1" value="" placeholder="auto">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Gift min</label>
+                    <input type="number" class="form-control" id="gift_min" name="gift_min" min="0" step="1" value="" placeholder="auto">
+                </div>
+            </form>
+            <div class="mt-3 d-flex gap-2">
+                <button id="btnStart" class="btn btn-success btn-lg" onclick="startBot()">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    ▶ Запустить
+                </button>
+                <button id="btnStop" class="btn btn-danger btn-lg d-none" onclick="stopBot()">
+                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    ■ Остановить
+                </button>
+                <button class="btn btn-outline-secondary btn-lg" onclick="clearLogs()">🗑 Очистить лог</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="row mb-4" id="statusCards">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value" id="statRunning">Остановлен</div>
+                    <div class="stat-label">Статус</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value text-success" id="statBalance">0</div>
+                    <div class="stat-label">Текущий баланс</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value text-warning" id="statCoins">0</div>
+                    <div class="stat-label">Монет за сессию</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value text-info" id="statCoupons">0</div>
+                    <div class="stat-label">Купонов</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4" id="detailStats" style="display: none;">
+        <div class="col-md-2">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value" id="statRounds">0</div>
+                    <div class="stat-label">Раундов</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value text-success" id="statPlayed">0</div>
+                    <div class="stat-label">Сыграно</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value text-secondary" id="statSkipped">0</div>
+                    <div class="stat-label">Пропущено</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value text-danger" id="statErrors">0</div>
+                    <div class="stat-label">Ошибок</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value" id="statPromoSeen">0</div>
+                    <div class="stat-label">Промо видено</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <div class="stat-value" id="statPromoReach">0</div>
+                    <div class="stat-label">Промо достижимо</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coupon Stats -->
+    <div class="card mb-4" id="couponStatsCard" style="display: none;">
+        <div class="card-header">
+            <h5 class="mb-0">📊 Статистика купонов (за 10 мин / всего)</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>За последние 10 минут:</strong>
+                    <div id="stats10min" class="text-muted mt-1">ожидание...</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>Всего за сессию:</strong>
+                    <div id="statsTotal" class="text-muted mt-1">нет данных</div>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-12">
+                    <strong>По скидкам:</strong>
+                    <div id="couponBreakdown" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Panel -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📋 Лог (последние 500 строк)</h5>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoScroll" checked>
+                <label class="form-check-label small" for="autoScroll">Автопрокрутка</label>
+            </div>
+        </div>
+        <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+            <pre id="logOutput" class="mb-0 p-3" style="font-size: 0.85rem; line-height: 1.5;"></pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let logIndex = 0;
+let statsInterval = null;
+let logsInterval = null;
+
+function updateUI(stats) {
+    // Status
+    const running = stats.running;
+    document.getElementById('statRunning').textContent = running ? '🟢 Работает' : '🔴 Остановлен';
+    document.getElementById('statRunning').className = running ? 'stat-value text-success' : 'stat-value text-danger';
+    
+    // Buttons
+    document.getElementById('btnStart').classList.toggle('d-none', running);
+    document.getElementById('btnStop').classList.toggle('d-none', !running);
+    
+    // Stats
+    document.getElementById('statBalance').textContent = stats.balance.toLocaleString();
+    document.getElementById('statCoins').textContent = stats.coins.toLocaleString();
+    document.getElementById('statCoupons').textContent = stats.coupons;
+    document.getElementById('statRounds').textContent = stats.rounds;
+    document.getElementById('statPlayed').textContent = stats.played;
+    document.getElementById('statSkipped').textContent = stats.skipped;
+    document.getElementById('statErrors').textContent = stats.errors;
+    document.getElementById('statPromoSeen').textContent = stats.promo_seen || 0;
+    document.getElementById('statPromoReach').textContent = stats.promo_reachable || 0;
+    
+    // Detail stats visibility
+    document.getElementById('detailStats').style.display = stats.rounds > 0 ? 'flex' : 'none';
+    document.getElementById('couponStatsCard').style.display = (stats.coupons > 0 || (stats.coupon_stats && Object.keys(stats.coupon_stats).length > 0)) ? 'block' : 'none';
+    
+    // Coupon stats
+    document.getElementById('stats10min').textContent = stats.formatted_10min || 'нет данных';
+    document.getElementById('statsTotal').textContent = stats.formatted_total || 'нет купонов';
+    
+    // Coupon breakdown
+    if (stats.coupon_stats && Object.keys(stats.coupon_stats).length > 0) {
+        let html = '';
+        for (const [disc, count] of Object.entries(stats.coupon_stats).sort((a,b) => b[0] - a[0])) {
+            html += `<span class="badge bg-primary me-2 mb-1" style="font-size: 0.9rem;">${disc}% — ${count} шт</span>`;
+        }
+        document.getElementById('couponBreakdown').innerHTML = html;
+    }
+}
+
+function appendLogs(logs) {
+    const logEl = document.getElementById('logOutput');
+    const autoScroll = document.getElementById('autoScroll').checked;
+    const wasAtBottom = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 10;
+    
+    for (const line of logs) {
+        // Colorize log lines
+        let colored = escapeHtml(line);
+        if (colored.includes('ОШИБКА') || colored.includes('ошибка') || colored.includes('Error') || colored.includes('error')) {
+            colored = `<span class="text-danger">${colored}</span>`;
+        } else if (colored.includes('ПОБЕДА') || colored.includes('Победа') || colored.includes('WIN') || colored.includes('win_finished')) {
+            colored = `<span class="text-success">${colored}</span>`;
+        } else if (colored.includes('Купон') || colored.includes('купон') || colored.includes('COUPON') || colored.includes('🎁')) {
+            colored = `<span class="text-warning">${colored}</span>`;
+        } else if (colored.includes('СТАРТ') || colored.includes('Старт') || colored.includes('старт')) {
+            colored = `<span class="text-info">${colored}</span>`;
+        } else if (colored.includes('ИТОГО') || colored.includes('Итог')) {
+            colored = `<span class="text-primary fw-bold">${colored}</span>`;
+        } else if (colored.includes('📊') || colored.includes('Статистика')) {
+            colored = `<span class="text-info fw-bold">${colored}</span>`;
+        } else if (colored.includes('пропуск') || colored.includes('пропуск')) {
+            colored = `<span class="text-secondary">${colored}</span>`;
+        }
+        logEl.innerHTML += colored + '\n';
+    }
+    
+    if (autoScroll || wasAtBottom) {
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function fetchStats() {
+    try {
+        const resp = await fetch('/api/farm9/stats');
+        if (resp.ok) {
+            const stats = await resp.json();
+            updateUI(stats);
+        }
+    } catch (e) {
+        console.error('Stats fetch error:', e);
+    }
+}
+
+async function fetchLogs() {
+    try {
+        const resp = await fetch(`/api/farm9/logs?since=${logIndex}`);
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.logs.length > 0) {
+                appendLogs(data.logs);
+                logIndex = data.total;
+            }
+        }
+    } catch (e) {
+        console.error('Logs fetch error:', e);
+    }
+}
+
+async function startBot() {
+    const form = document.getElementById('startForm');
+    const formData = new FormData(form);
+    const body = {};
+    for (const [key, value] of formData.entries()) {
+        if (value !== '') {
+            body[key] = key === 'minutes' || key === 'delay' || key === 'gift_min' ? parseFloat(value) : 
+                       key === 'target' ? parseInt(value) : value;
+        }
+    }
+    
+    const btn = document.getElementById('btnStart');
+    btn.disabled = true;
+    btn.querySelector('.spinner-border').classList.remove('d-none');
+    
+    try {
+        const resp = await fetch('/api/farm9/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            btn.disabled = false;
+            btn.querySelector('.spinner-border').classList.add('d-none');
+        }
+    } catch (e) {
+        alert('Ошибка сети: ' + e.message);
+        btn.disabled = false;
+        btn.querySelector('.spinner-border').classList.add('d-none');
+    }
+}
+
+async function stopBot() {
+    const btn = document.getElementById('btnStop');
+    btn.disabled = true;
+    btn.querySelector('.spinner-border').classList.remove('d-none');
+    
+    try {
+        await fetch('/api/farm9/stop', {method: 'POST'});
+    } catch (e) {
+        console.error('Stop error:', e);
+    } finally {
+        btn.disabled = false;
+        btn.querySelector('.spinner-border').classList.add('d-none');
+    }
+}
+
+function clearLogs() {
+    document.getElementById('logOutput').innerHTML = '';
+    logIndex = 0;
+}
+
+// Start polling when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Initial stats
+    fetchStats();
+    fetchLogs();
+    
+    // Poll stats every 2 seconds
+    statsInterval = setInterval(fetchStats, 2000);
+    // Poll logs every 1 second
+    logsInterval = setInterval(fetchLogs, 1000);
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (statsInterval) clearInterval(statsInterval);
+    if (logsInterval) clearInterval(logsInterval);
+});
+</script>
+
+<style>
+.stats-card {
+    border-left: 4px solid #0d6efd;
+}
+.stats-card:nth-child(2) { border-left-color: #198754; }
+.stats-card:nth-child(3) { border-left-color: #ffc107; }
+.stats-card:nth-child(4) { border-left-color: #0dcaf0; }
+.stats-card:nth-child(5) { border-left-color: #6f42c1; }
+.stats-card:nth-child(6) { border-left-color: #fd7e14; }
+.stats-card:nth-child(7) { border-left-color: #20c997; }
+.stats-card:nth-child(8) { border-left-color: #e83e8c; }
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+}
+.stat-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#logOutput {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 0;
+    border: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+</style>
+{% endblock %}
