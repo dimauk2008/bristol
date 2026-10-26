@@ -18,6 +18,7 @@ COPY web_coupons/requirements.txt /app/web_coupons/requirements.txt
 RUN pip install --no-cache-dir -r /app/web_coupons/requirements.txt
 
 COPY web_coupons /app/web_coupons
+COPY capture /app/capture
 
 RUN mkdir -p /data
 VOLUME ["/data"]
