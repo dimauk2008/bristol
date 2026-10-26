@@ -1,5 +1,4 @@
 # РєРѕРЅС‚РµРєСЃС‚ СЃР±РѕСЂРєРё: РІ РѕР±СЂР°Р· РїРѕРїР°РґР°РµС‚ С‚РѕР»СЊРєРѕ web_coupons
-capture/
 game_auto/
 shop_bot/
 farm_bot/
@@ -21,7 +20,6 @@ venv/
 cookies.json
 **/*.db
 **/*.db-*
-capture/
 web_coupons/coupons.db
 web_coupons/bristol_prefs.xml
 web_coupons/server.log
