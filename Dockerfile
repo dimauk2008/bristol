@@ -17,8 +17,9 @@ RUN apt-get update \
 COPY web_coupons/requirements.txt /app/web_coupons/requirements.txt
 RUN pip install --no-cache-dir -r /app/web_coupons/requirements.txt
 
-COPY web_coupons /app/web_coupons
+# Copy capture folder (contains farm9_lib, play, etc.) - cache bust: 2026-10-26
 COPY capture /app/capture
+COPY web_coupons /app/web_coupons
 
 RUN mkdir -p /data
 VOLUME ["/data"]
