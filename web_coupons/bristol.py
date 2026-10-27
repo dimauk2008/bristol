@@ -903,13 +903,17 @@ def fetch_coupons(token: str | None = None) -> dict:
 
     422 обычно означает, что API не смог разобрать свои же данные по одному
     из купонов — тогда без статуса/с фильтром по типу может вернуться рабочий
-    список. Если не помогло ни одно вариантов, поднимаем исходную ошибку.
+    список. Резервные ответы объединяются между собой, а не заменяют основной:
+    иначе фильтр по типу мог «потерять» часть купонов. Если не помогло ни
+    одного варианта, поднимаем исходную ошибку.
     """
     if token is None:
         token = get_token()
     first_error: BristolError | None = None
     last_error: BristolError | None = None
-    for path in _COUPON_PATHS:
+    empty_fallback: dict | None = None
+    fallback: list[dict] = []
+    for index, path in enumerate(_COUPON_PATHS):
         try:
             data = _api_get(path, token)
         except BristolError as e:
@@ -921,13 +925,35 @@ def fetch_coupons(token: str | None = None) -> dict:
                 continue
             raise
         coupons = data.get('coupons')
-        if isinstance(coupons, list):
-            if path != _COUPON_PATHS[0]:
-                log.info('купоны получены резервным запросом %s (купонов: %s)', path, len(coupons))
+        if not isinstance(coupons, list):
+            last_error = BristolError(f'API Бристоля вернул неожиданный ответ на {path}')
+            if first_error is None:
+                first_error = last_error
+            continue
+        if index == 0:
             return data
-        last_error = BristolError(f'API Бристоля вернул неожиданный ответ на {path}')
-        if first_error is None:
-            first_error = last_error
+        if coupons:
+            fallback.append(data)
+        else:
+            # Резервный вариант без нужных параметров может вернуть пустой
+            # список. Не принимаем его за «купонов нет».
+            log.warning('купоны: %s вернул пустой список, пробую дальше', path)
+            empty_fallback = data
+
+    if fallback:
+        merged: dict[str, dict] = {}
+        for data in fallback:
+            for c in data.get('coupons') or []:
+                num = c.get('number')
+                if num:
+                    merged.setdefault(num, c)
+        base = dict(fallback[0])
+        base['coupons'] = list(merged.values())
+        base['_fallback'] = True
+        log.info('купоны: резервные запросы дали %s купонов', len(base['coupons']))
+        return base
+    if empty_fallback is not None and first_error is None:
+        return empty_fallback
     raise first_error or last_error or BristolError('Не удалось получить купоны Бристоля.')
 
 
@@ -1118,18 +1144,35 @@ def _sync_impl(account_id=None) -> dict:
 
     coupons = None
     coupons_error = ''
+    replace_all = True
     try:
-        coupons = fetch_coupons(token).get('coupons') or []
+        data = fetch_coupons(token)
+        coupons = data.get('coupons') or []
+        replace_all = not data.get('_fallback')
+        log.info('account %s: купонов получено %s%s', aid, len(coupons),
+                 '' if replace_all else ' (резервный запрос, без удаления старых)')
     except BristolError as e:
         coupons_error = str(e)
         log.warning('account %s: купоны не обновлены: %s', aid, coupons_error)
+
+    # Пустой ответ не должен затирать уже сохранённые купоны: API Бристоля
+    # периодически отдаёт пустой список при сбоях, и автосинхронизация
+    # «теряла» купоны до ручного запуска.
+    if coupons is not None and not coupons:
+        stored = _stored_coupon_count(aid)
+        if stored:
+            coupons = None
+            coupons_error = (f'Бристоль вернул пустой список купонов, '
+                             f'оставлены предыдущие ({stored})')
+            log.warning('account %s: %s', aid, coupons_error)
 
     if coupons is not None:
         local_images = _cache_coupon_images(coupons, token)
         ocr_meta = _ocr_coupon_meta(coupons, local_images)
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute('DELETE FROM bristol_coupons WHERE account_id=?', (aid,))
+        if replace_all:
+            cur.execute('DELETE FROM bristol_coupons WHERE account_id=?', (aid,))
         for c in coupons:
             num = c.get('number')
             discount, title = ocr_meta.get(num, (None, None))
@@ -1163,14 +1206,14 @@ def _sync_impl(account_id=None) -> dict:
         conn.commit()
         conn.close()
 
-    previous = get_meta(aid)
+    stored_count = _stored_coupon_count(aid)
     meta = {
         'phone': user.get('phone', ''),
         'name': ' '.join(x for x in (user.get('first_name'), user.get('last_name')) if x),
         'balance': user.get('status_active_balance'),
         'loyalty_status': user.get('loyalty_status', ''),
         'synced_at': now,
-        'coupon_count': len(coupons) if coupons is not None else previous.get('coupon_count', 0),
+        'coupon_count': stored_count,
         'card_qr': card_qr,
         'card_schedule': schedule,
         'last_coupons_error': coupons_error,
@@ -1200,6 +1243,17 @@ def get_meta(account_id=None) -> dict:
             out[r['key']] = r['value']
     conn.close()
     return out
+
+
+def _stored_coupon_count(account_id) -> int:
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute('SELECT COUNT(*) AS n FROM bristol_coupons WHERE account_id=?', (account_id,))
+        row = cur.fetchone()
+    finally:
+        conn.close()
+    return int(row['n'] or 0) if row else 0
 
 
 def get_stored_coupons(account_id=None) -> list:
