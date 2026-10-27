@@ -5,370 +5,726 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#e22326">
+<meta name="theme-color" content="#7d0f12">
 <title>Мир скидок — карта лояльности</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
+  :root {
+    --red:#e22326;
+    --red-2:#ff4b4e;
+    --ink:#20161a;
+    --muted:rgba(255,255,255,.7);
+  }
   html { -webkit-text-size-adjust:100%; }
-
   body {
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
-    background:#1a1a1a;
-    color:#fff;
     min-height:100vh;
-    min-height:100dvh;
+    background:#0b0709;
+    color:#fff;
     display:flex;
     justify-content:center;
-    align-items:stretch;
     overflow-x:hidden;
     -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
   }
-
-  @keyframes fadeInUp {
-    from { opacity:0; transform:translateY(16px); }
-    to { opacity:1; transform:translateY(0); }
-  }
-  @keyframes spin {
-    from { transform:rotate(0deg); }
-    to { transform:rotate(360deg); }
-  }
-  @keyframes pop {
-    0% { transform:scale(.96); opacity:.6; }
-    100% { transform:scale(1); opacity:1; }
-  }
+  .stage { width:100%; max-width:460px; position:relative; }
 
   .phone {
     position:relative;
     width:100%;
-    max-width:460px;
     min-height:100vh;
     min-height:100dvh;
-    background:linear-gradient(180deg,#f03134 0%, #e22326 55%, #d81f22 100%);
+    padding:20px 20px calc(110px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 70% at 15% -10%, #ff6a4d 0%, transparent 45%),
+      radial-gradient(100% 60% at 95% 8%, #ff2d6f 0%, transparent 42%),
+      linear-gradient(165deg, #e22326 0%, #b81418 46%, #6e0b0e 100%);
     overflow:hidden;
-    padding-bottom:120px;
-    padding-bottom:calc(120px + env(safe-area-inset-bottom));
-    box-shadow:0 24px 70px rgba(0,0,0,.65);
+    box-shadow:0 30px 90px rgba(0,0,0,.7);
   }
-
-  .sheet {
-    position:relative;
-    z-index:10;
-    padding:22px 22px 0;
-    animation:fadeInUp .5s ease-out both;
+  .phone::before, .phone::after {
+    content:''; position:absolute; border-radius:50%; pointer-events:none;
+    filter:blur(60px); opacity:.45;
   }
-
-  .sheet-head {
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    margin-bottom:4px;
+  .phone::before { width:320px; height:320px; left:-120px; top:120px; background:#ff8a00; }
+  .phone::after { width:300px; height:300px; right:-140px; top:340px; background:#ff1f6b; }
+  .grain {
+    position:absolute; inset:0; pointer-events:none; opacity:.22; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
   }
+  .content { position:relative; z-index:2; }
 
-  .logo { display:flex; align-items:center; gap:9px; }
+  .top { display:flex; align-items:flex-start; justify-content:space-between; }
+  .logo { display:flex; align-items:center; gap:10px; }
   .logo .b {
     width:40px; height:40px; border-radius:50%;
-    background:#fff; color:#e22326;
+    background:#fff; color:var(--red);
     display:flex; align-items:center; justify-content:center;
-    font:900 27px Arial,sans-serif;
-    box-shadow:inset 0 0 0 3px #fff, 0 0 0 2px #e22326;
-    transition:box-shadow .3s;
+    font:900 26px/1 Arial,sans-serif;
+    box-shadow:0 6px 16px rgba(0,0,0,.18);
   }
   .logo .name {
-    color:#fff; font-size:23px; font-weight:900; letter-spacing:1px;
     font-family:'Arial Narrow',Arial,sans-serif;
-    text-shadow:0 1px 2px rgba(0,0,0,.25);
+    font-size:22px; font-weight:900; letter-spacing:1.2px;
+    text-shadow:0 1px 2px rgba(0,0,0,.2);
   }
-
-  .close-btn {
-    width:40px; height:40px; border-radius:50%;
-    background:#fff; border:none; cursor:pointer;
+  .icon-btn {
+    width:40px; height:40px; border-radius:50%; border:0; cursor:pointer;
+    background:rgba(255,255,255,.92); color:#2a2226;
     display:flex; align-items:center; justify-content:center;
-    color:#222; box-shadow:0 2px 6px rgba(0,0,0,.15);
-    transition:transform .3s, box-shadow .3s;
-    outline:none;
+    box-shadow:0 4px 14px rgba(0,0,0,.16);
+    transition:transform .2s ease;
   }
-  .close-btn:active { transform:scale(.92); box-shadow:0 4px 14px rgba(0,0,0,.3); }
+  .icon-btn:active { transform:scale(.92); }
 
-  /* Баланс / статус */
-  .balance-row {
-    display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
-    margin:16px 0 0;
-  }
-  .chip {
-    background:rgba(255,255,255,.16);
-    border:1px solid rgba(255,255,255,.25);
-    padding:6px 14px; border-radius:999px;
-    font-size:13px; font-weight:600;
-    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-  }
-  .chip b { font-size:15px; }
+  .hello { margin-top:22px; }
+  .hello h1 { font-size:22px; letter-spacing:-.02em; font-weight:800; word-break:break-word; }
+  .hello p { margin-top:4px; font-size:13.5px; color:rgba(255,255,255,.78); }
 
-  /* Карточка с QR */
-  .qr-card {
-    margin:22px auto 0;
-    width:264px; max-width:100%;
-    background:#fff;
-    border-radius:20px;
-    padding:18px 18px 20px;
-    box-shadow:0 6px 18px rgba(0,0,0,.2);
-    transition:box-shadow .4s;
-    position:relative;
-  }
-  .qr-card:active { box-shadow:0 14px 34px rgba(0,0,0,.28); }
-  .qr-wrap {
-    display:flex; flex-direction:column; align-items:center; gap:10px;
-  }
-  .qr-img {
-    width:100%; height:auto; display:block;
-    border-radius:6px;
-    image-rendering:pixelated; image-rendering:crisp-edges;
-    animation:pop .35s ease-out;
-  }
-  .qr-hint { color:#8b909c; font-size:12.5px; text-align:center; line-height:1.4; }
-  .qr-empty {
-    color:#b42318; font-size:14px; text-align:center;
-    padding:38px 10px; line-height:1.5;
-  }
-
-  .rules {
-    text-align:center; color:#fff; font-size:13.5px;
-    margin:16px auto 0; max-width:300px; line-height:1.45;
-  }
-  .rules a { color:#fff; text-decoration:underline; text-underline-offset:2px; transition:opacity .25s; }
-  .rules a:active { opacity:.75; }
-
-  .update-btn {
-    display:flex; align-items:center; justify-content:center; gap:9px;
-    margin:16px auto 0; width:264px; max-width:100%;
-    background:#fff; border:none; cursor:pointer;
-    border-radius:999px; padding:13px 0;
-    color:#e22326; font-size:16px; font-weight:700;
-    box-shadow:0 3px 8px rgba(0,0,0,.15);
-    transition:transform .3s, box-shadow .3s;
-    outline:none; font-family:inherit;
-  }
-  .update-btn:active { transform:scale(.96); box-shadow:0 8px 20px rgba(0,0,0,.25); }
-  .refresh-icon { width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:20px; }
-  .refresh-icon.spinning { animation:spin .6s ease; }
-
-  .coupons-btn {
-    display:flex; align-items:center; justify-content:center; gap:9px;
-    margin:10px auto 0; width:264px; max-width:100%;
-    background:rgba(255,255,255,.16);
+  .tier {
+    display:inline-flex; align-items:center; gap:8px; margin-top:12px;
+    padding:6px 12px 6px 8px; border-radius:999px;
+    background:linear-gradient(100deg, rgba(255,255,255,.28), rgba(255,255,255,.10));
     border:1px solid rgba(255,255,255,.3);
-    color:#fff; text-decoration:none; cursor:pointer;
-    border-radius:999px; padding:12px 0;
-    font-size:15px; font-weight:700;
-    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-    transition:transform .3s, background .3s;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    font-size:12.5px; font-weight:700;
   }
-  .coupons-btn:active { transform:scale(.96); }
-  .coupons-count {
-    background:#fff; color:#e22326;
-    border-radius:999px; min-width:24px; height:24px;
-    display:inline-flex; align-items:center; justify-content:center;
-    font-size:13px; font-weight:800; padding:0 7px;
+  .tier .medal {
+    width:20px; height:20px; border-radius:50%;
+    background:linear-gradient(140deg,#f7e7b0,#c8a24a 55%,#9d7a2a);
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.8), 0 1px 3px rgba(0,0,0,.25);
+    flex:none;
   }
 
-  .access-timer {
-    text-align:center; font-size:12.5px; opacity:.9;
-    margin-top:16px;
+  /* ---------- card ---------- */
+  .card-scene { margin-top:20px; perspective:1400px; }
+  .lcard {
+    position:relative; width:100%; height:438px;
+    transform-style:preserve-3d;
+    transition:transform .8s cubic-bezier(.2,.8,.2,1);
+    cursor:pointer; will-change:transform;
   }
-  .access-timer b { font-variant-numeric:tabular-nums; }
-
-  /* Как действует */
-  .how { margin-top:26px; color:#fff; }
-  .how h2 { font-size:19.5px; font-weight:800; line-height:1.25; }
-  .how p { margin-top:12px; font-size:14.5px; line-height:1.5; opacity:.97; }
-
-  /* Нижняя кнопка Я Пэй */
-  .pay-bar {
-    position:fixed; left:0; right:0; bottom:0; z-index:20;
-    background:#0d0723;
-    padding:12px 14px 16px;
-    padding-bottom:calc(16px + env(safe-area-inset-bottom));
-    display:flex; justify-content:center;
+  .lcard.flipped { transform:rotateY(180deg); }
+  .face {
+    position:absolute; inset:0; border-radius:26px; overflow:hidden;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    box-shadow:0 26px 60px rgba(50,0,4,.45), 0 2px 0 rgba(255,255,255,.18) inset;
   }
-  .pay-inner { width:100%; max-width:460px; }
-  .pay-btn {
+  .front {
+    background:
+      radial-gradient(90% 60% at 110% 0%, rgba(255,255,255,.28), transparent 55%),
+      radial-gradient(80% 60% at -10% 100%, rgba(0,0,0,.30), transparent 55%),
+      linear-gradient(155deg, #c0171b 0%, #8e0f13 52%, #560709 100%);
+    border:1px solid rgba(255,255,255,.22);
+    padding:18px 20px;
+    display:flex; flex-direction:column;
+  }
+  .front::after {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 30%, rgba(255,255,255,.18) 46%, transparent 58%);
+    transform:translateX(-60%);
+    animation:sheen 7s ease-in-out infinite;
+  }
+  @keyframes sheen { 0%,62% { transform:translateX(-70%); } 80%,100% { transform:translateX(70%); } }
+
+  .card-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .card-brand { display:flex; align-items:center; gap:8px; font:900 13px/1 'Arial Narrow',Arial,sans-serif; letter-spacing:1.6px; }
+  .card-brand .b2 {
+    width:26px; height:26px; border-radius:50%; background:#fff; color:#a51216;
+    display:flex; align-items:center; justify-content:center; font-size:17px;
+  }
+  .card-kind { font-size:10px; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:rgba(255,255,255,.72); }
+
+  .qr-zone { flex:1; display:flex; align-items:center; justify-content:center; padding:12px 0 6px; }
+  .qr-plate {
+    width:238px; height:238px; max-width:82%; max-height:82%;
+    background:#fff; border-radius:18px; padding:12px;
+    box-shadow:0 12px 28px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.05);
+    display:flex; align-items:center; justify-content:center;
     position:relative;
-    background:#171040;
-    border:1px solid #3d2f7a;
-    border-radius:18px;
-    padding:14px 0 12px;
-    text-align:center;
-    cursor:pointer;
-    transition:border-color .3s, box-shadow .3s;
   }
-  .pay-btn:active { opacity:.9; }
-  .pay-btn .title { color:#fff; font-size:20px; font-weight:800; }
-  .pay-btn .title .ya { display:inline-flex; align-items:center; gap:4px; vertical-align:-3px; margin-left:5px; }
-  .pay-btn .title .ya .o {
-    width:22px; height:22px; border-radius:50%; background:#fc3f1d;
-    display:inline-flex; align-items:center; justify-content:center;
-    color:#fff; font-size:14px; font-weight:700;
+  .qr-plate img {
+    width:100%; height:100%; object-fit:contain; display:block;
+    image-rendering:pixelated; image-rendering:crisp-edges;
+    border-radius:6px;
   }
-  .pay-btn .title .ya .p { color:#fff; font-style:italic; font-weight:900; letter-spacing:1px; }
-  .pay-btn .sub { color:#cfc9ea; font-size:12px; margin-top:3px; }
-
-  @media (max-width:480px) {
-    .sheet { padding:18px 18px 0; }
-    .qr-card { width:240px; }
-    .logo .name { font-size:21px; }
+  .qr-badge {
+    position:absolute; left:50%; bottom:-13px; transform:translateX(-50%);
+    background:#fff; color:#8e0f13; border-radius:999px;
+    font-size:10.5px; font-weight:800; letter-spacing:.03em;
+    padding:4px 10px; white-space:nowrap;
+    box-shadow:0 4px 12px rgba(0,0,0,.18);
   }
-  @media (max-width:360px) {
-    .qr-card { width:220px; }
-    .logo .name { font-size:19px; }
+  .qr-badge .live { display:inline-block; width:6px; height:6px; border-radius:50%; background:#12b76a; margin-right:5px; vertical-align:1px; animation:blink 2s infinite; }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+  .qr-empty {
+    color:#b42318; font-size:13.5px; text-align:center;
+    padding:38px 12px; line-height:1.5; font-weight:600;
   }
 
+  .card-bottom { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+  .holder { min-width:0; }
+  .holder .lbl { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.55); }
+  .holder .val { margin-top:3px; font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px; }
+  .card-num { font-size:14px; font-weight:700; letter-spacing:.14em; color:rgba(255,255,255,.88); font-variant-numeric:tabular-nums; flex:none; }
+
+  .back {
+    transform:rotateY(180deg);
+    background:linear-gradient(155deg,#3a0b10 0%, #26060a 60%, #170407 100%);
+    border:1px solid rgba(255,255,255,.14);
+    padding:24px 22px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .back h3 { font-size:16px; font-weight:800; }
+  .back ul { list-style:none; display:flex; flex-direction:column; gap:9px; }
+  .back li { position:relative; padding-left:18px; font-size:12.5px; line-height:1.45; color:rgba(255,255,255,.78); }
+  .back li::before { content:''; position:absolute; left:0; top:6px; width:7px; height:7px; border-radius:2px; background:var(--red-2); }
+  .back .valid { margin-top:auto; display:flex; justify-content:space-between; gap:10px; font-size:11px; color:rgba(255,255,255,.55); letter-spacing:.03em; }
+
+  .card-hint { text-align:center; margin-top:14px; font-size:11.5px; color:rgba(255,255,255,.6); }
+
+  .actions { margin-top:18px; display:flex; gap:10px; }
+  .btn {
+    flex:1; border:0; border-radius:16px; padding:15px 16px;
+    font:inherit; font-size:15px; font-weight:800; cursor:pointer; text-decoration:none;
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .btn:active { transform:scale(.97); }
+  .btn-primary { background:#fff; color:#a51216; box-shadow:0 10px 24px rgba(30,0,2,.28); }
+  .btn-primary[disabled] { opacity:.55; pointer-events:none; }
+  .btn-ghost {
+    flex:0 0 auto; width:54px; background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.24); color:#fff;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+
+  /* ---------- panels ---------- */
+  .panel {
+    margin-top:14px; border-radius:22px; padding:16px;
+    background:rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.16);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 10px 26px rgba(40,0,2,.14);
+  }
+
+  .balance { display:flex; align-items:center; gap:16px; }
+  .ring { position:relative; width:96px; height:96px; flex:none; }
+  .ring svg { transform:rotate(-90deg); }
+  .ring .num {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; font-variant-numeric:tabular-nums;
+  }
+  .ring .num b { font-size:20px; font-weight:900; letter-spacing:-.03em; line-height:1; max-width:82px; overflow:hidden; text-overflow:ellipsis; }
+  .ring .num span { margin-top:3px; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  .balance-info { flex:1; min-width:0; }
+  .balance-info .title { font-size:13px; font-weight:700; color:rgba(255,255,255,.82); }
+  .balance-info .sub { margin-top:7px; font-size:11.5px; line-height:1.45; color:rgba(255,255,255,.62); }
+  .balance-info .sub b { color:#fff; font-weight:700; }
+
+  .section-head { display:flex; align-items:center; justify-content:space-between; margin:22px 2px 12px; }
+  .section-head h2 { font-size:17px; letter-spacing:-.01em; font-weight:800; }
+  .section-head .all { background:none; border:0; color:rgba(255,255,255,.78); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; padding:6px 2px; text-decoration:none; }
+
+  .coupon-list { display:flex; flex-direction:column; gap:10px; }
+  .coupon-card {
+    background:#fff; border-radius:16px; overflow:hidden; text-decoration:none; color:inherit;
+    box-shadow:0 10px 24px rgba(40,0,2,.18); display:block;
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .coupon-card:active { transform:scale(.99); }
+  .coupon-card .shot { display:block; width:100%; height:auto; background:#f6f2f3; }
+  .coupon-foot {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 12px; font-size:11.5px; font-weight:600; color:#7a6a70;
+  }
+  .coupon-foot .exp { display:inline-flex; align-items:center; gap:6px; }
+  .coupon-foot .exp .dot { width:6px; height:6px; border-radius:50%; background:#f79009; }
+  .coupon-foot .more { color:#c0171b; font-weight:800; white-space:nowrap; }
+  .coupon-empty {
+    padding:18px; border-radius:16px; text-align:center;
+    background:rgba(255,255,255,.10); border:1px dashed rgba(255,255,255,.25);
+    font-size:12.5px; color:rgba(255,255,255,.7);
+  }
+
+  .meta { display:flex; flex-direction:column; gap:12px; }
+  .meta-line { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; }
+  .meta-line .k { color:rgba(255,255,255,.68); font-weight:600; }
+  .meta-line b { font-variant-numeric:tabular-nums; }
+  .accessbar { height:8px; border-radius:999px; background:rgba(0,0,0,.24); overflow:hidden; }
+  .accessbar i { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#7ee2a8,#12b76a); transition:width 1s linear, background .5s; }
+  .accessbar.warn i { background:linear-gradient(90deg,#ffd166,#f79009); }
+  .accessbar.danger i { background:linear-gradient(90deg,#ff8f8f,#e22326); }
+  .divider { height:1px; background:rgba(255,255,255,.12); }
+  .refresh-line { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .refresh-info { font-size:12.5px; color:rgba(255,255,255,.72); font-weight:600; }
+  .refresh-info b { color:#fff; font-variant-numeric:tabular-nums; }
+  .refresh-btn {
+    position:relative; width:38px; height:38px; flex:none;
+    border-radius:50%; border:0; cursor:pointer; background:rgba(255,255,255,.12); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:17px;
+    transition:transform .2s ease, background .2s ease;
+  }
+  .refresh-btn:active { transform:scale(.9); background:rgba(255,255,255,.2); }
+  .refresh-btn svg.progress { position:absolute; inset:0; transform:rotate(-90deg); }
+  .refresh-btn.spin span { animation:spin .6s ease; }
+  @keyframes spin { from { transform:rotate(0); } to { transform:rotate(360deg); } }
+  .synced { font-size:10.5px; color:rgba(255,255,255,.45); display:flex; align-items:center; gap:6px; }
+  .synced .ok { color:#7ee2a8; }
+
+  .how { margin-top:24px; color:#fff; }
+  .how h2 { font-size:19px; font-weight:800; line-height:1.25; }
+  .how p { margin-top:11px; font-size:14px; line-height:1.5; opacity:.95; }
+  .how a { color:#fff; text-decoration:underline; text-underline-offset:2px; }
+
+  .paybar {
+    position:fixed; left:50%; bottom:0; transform:translateX(-50%);
+    width:100%; max-width:460px; z-index:20;
+    padding:10px 14px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg, rgba(11,7,9,0), rgba(11,7,9,.88) 42%, #0b0709);
+  }
+  .paycard {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:18px; padding:11px 14px;
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  }
+  .paycard .t { font-size:14px; font-weight:800; display:flex; align-items:center; gap:6px; }
+  .paycard .t .ya { display:inline-flex; align-items:center; gap:4px; }
+  .paycard .t .o { width:19px; height:19px; border-radius:50%; background:#fc3f1d; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+  .paycard .t .p { font-style:italic; font-weight:900; letter-spacing:.5px; font-size:13px; }
+  .paycard .s { margin-top:2px; font-size:10.5px; color:rgba(255,255,255,.55); }
+  .paycard .go { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center; flex:none; }
+
+  /* ---------- fullscreen QR ---------- */
+  .overlay {
+    position:fixed; inset:0; z-index:100;
+    background:#fff; color:#1c1518;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; padding:24px;
+    opacity:0; visibility:hidden; transform:scale(.985);
+    transition:opacity .25s ease, transform .25s ease, visibility .25s;
+  }
+  .overlay.open { opacity:1; visibility:visible; transform:scale(1); }
+  .overlay .brandline { display:flex; align-items:center; gap:9px; font-size:13px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#a51216; }
+  .overlay .brandline .b2 { width:26px; height:26px; border-radius:50%; background:#a51216; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .overlay .bigqr {
+    width:min(78vw, 380px); aspect-ratio:1; background:#fff;
+    border-radius:22px; padding:14px;
+    box-shadow:0 0 0 1px #ececec, 0 24px 60px rgba(0,0,0,.12);
+  }
+  .overlay .bigqr img { width:100%; height:100%; object-fit:contain; display:block; image-rendering:pixelated; }
+  .overlay h2 { font-size:21px; letter-spacing:-.02em; }
+  .overlay p { font-size:13px; color:#7a6e73; text-align:center; max-width:300px; line-height:1.45; margin-top:-8px; }
+  .overlay .close-full {
+    position:absolute; top:calc(16px + env(safe-area-inset-top)); right:18px;
+    width:42px; height:42px; border-radius:50%; border:0; cursor:pointer;
+    background:#f2eef0; color:#2a2226; display:flex; align-items:center; justify-content:center;
+  }
+  .overlay .wake { display:flex; align-items:center; gap:7px; font-size:11.5px; color:#8b7f84; }
+  .overlay .wake .dot { width:7px; height:7px; border-radius:50%; background:#12b76a; animation:blink 2s infinite; }
+  .overlay .refresh-pill {
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid #eadfe2; background:#faf7f8; color:#7a6e73;
+    border-radius:999px; padding:8px 14px; font-size:11.5px; font-weight:700;
+  }
+
+  .toast {
+    position:fixed; left:50%; bottom:96px; transform:translate(-50%, 14px);
+    background:rgba(20,10,14,.92); color:#fff; font-size:12.5px; font-weight:600;
+    padding:10px 16px; border-radius:999px; z-index:120;
+    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+    box-shadow:0 10px 30px rgba(0,0,0,.35); white-space:nowrap; max-width:90vw;
+  }
+  .toast.show { opacity:1; transform:translate(-50%, 0); }
+
+  @media (max-width:380px) {
+    .phone { padding-left:16px; padding-right:16px; }
+    .lcard { height:404px; }
+    .qr-plate { width:212px; height:212px; }
+    .hello h1 { font-size:20px; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    * { transition:none !important; animation:none !important; }
+    *, *::before, *::after { animation:none !important; transition:none !important; }
+    .lcard { transition:none; }
   }
 </style>
 </head>
 <body>
-<div class="phone">
+<div class="stage">
+  <div class="phone">
+    <div class="grain"></div>
+    <div class="content">
 
-  <div class="sheet">
-    <div class="sheet-head">
-      <div class="logo">
-        <span class="b">Б</span>
-        <span class="name">МИР СКИДОК</span>
+      <div class="top">
+        <div class="logo">
+          <span class="b">Б</span>
+          <span class="name">МИР СКИДОК</span>
+        </div>
+        <button class="icon-btn" aria-label="Закрыть" onclick="closePage()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+        </button>
       </div>
-      <button class="close-btn" aria-label="Закрыть" onclick="closePage()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="3" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
-      </button>
-    </div>
 
-    {% if bristol_meta.balance is not none and bristol_meta.balance != '' %}
-    <div class="balance-row">
-      <span class="chip"><b>{{ bristol_meta.balance }}</b> баллов</span>
-    </div>
-    {% endif %}
-
-    <div class="qr-card">
-      {% if card_data %}
-      <div class="qr-wrap">
-        <img class="qr-img" id="qr" src="/s/{{ session.id }}/card/qr.png" alt="QR карты лояльности" draggable="false">
-        <div class="qr-hint">Покажите QR-код кассиру для начисления баллов</div>
+      {% set meta = bristol_meta or {} %}
+      {% set uname = meta.name or session.name %}
+      {% set status_map = {'active': 'Активный участник', 'inactive': 'Неактивный участник'} %}
+      {% set status_label = status_map.get(meta.loyalty_status, meta.loyalty_status) or 'Карта лояльности' %}
+      <div class="hello">
+        <h1>{% if meta.name %}Здравствуйте, {{ meta.name }}{% else %}{{ session.name }}{% endif %}</h1>
+        <p>Ваша карта всегда под рукой</p>
+        <div class="tier"><span class="medal"></span> {{ status_label }}</div>
       </div>
-      {% else %}
-      <div class="qr-empty">QR-код карты недоступен.<br>Попросите администратора синхронизировать данные.</div>
+
+      <div class="card-scene">
+        <div class="lcard" id="lcard" role="button" tabindex="0" aria-label="Перевернуть карту">
+          <div class="face front">
+            <div class="card-top">
+              <div class="card-brand"><span class="b2">Б</span> BRISTOL</div>
+              <div class="card-kind">карта лояльности</div>
+            </div>
+            <div class="qr-zone">
+              <div class="qr-plate">
+                {% if card_data %}
+                <img id="qr" src="/s/{{ session.id }}/card/qr.png" alt="QR карты лояльности" draggable="false">
+                <span class="qr-badge"><span class="live"></span>код обновлён</span>
+                {% else %}
+                <div class="qr-empty">QR-код карты недоступен.<br>Попросите администратора синхронизировать данные.</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="card-bottom">
+              <div class="holder">
+                <div class="lbl">Владелец</div>
+                <div class="val">{{ uname }}</div>
+              </div>
+              {% if meta.phone %}
+              <div class="card-num">•••• {{ (meta.phone|string)[-4:] }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="face back">
+            <h3>Карта «Мир скидок»</h3>
+            <ul>
+              <li>Скидка на товары с красным ценником применяется после сканирования карты.</li>
+              <li>Скидка не суммируется с другими акциями на тот же товар.</li>
+              <li>Стоимость алкоголя со скидкой не ниже минимальной розничной цены.</li>
+            </ul>
+            <div class="valid"><span>Карта лояльности Bristol</span><span>Мир скидок</span></div>
+          </div>
+        </div>
+        <div class="card-hint">Нажмите на карту, чтобы перевернуть</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="showBtn" {% if not card_data %}disabled{% endif %}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>
+          Показать кассиру
+        </button>
+        <button class="btn btn-ghost" id="flipBtn" title="Перевернуть карту" aria-label="Перевернуть карту">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+        </button>
+      </div>
+
+      {% if meta.balance is not none and meta.balance != '' %}
+      <section class="panel balance">
+        <div class="ring">
+          <svg width="96" height="96" viewBox="0 0 96 96">
+            <defs>
+              <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#ffe08a"/>
+                <stop offset="1" stop-color="#e22326"/>
+              </linearGradient>
+            </defs>
+            <circle cx="48" cy="48" r="41" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="7"/>
+            <circle id="ringFill" cx="48" cy="48" r="41" fill="none" stroke="url(#ringGrad)" stroke-width="7"
+                    stroke-linecap="round" stroke-dasharray="257.6" stroke-dashoffset="257.6"/>
+          </svg>
+          <div class="num"><b id="balanceNum" data-balance="{{ meta.balance }}">0</b><span>баллов</span></div>
+        </div>
+        <div class="balance-info">
+          <div class="title">Баланс карты</div>
+          <div class="sub">
+            {% if meta.loyalty_status %}Статус: <b>{{ status_label }}</b><br>{% endif %}
+            {% if meta.coupon_count is defined %}Купонов доступно: <b>{{ coupons_count }}</b>{% else %}Покажите карту на кассе, чтобы накопить баллы{% endif %}
+          </div>
+        </div>
+      </section>
+      {% elif meta.loyalty_status %}
+      <section class="panel balance">
+        <div class="balance-info">
+          <div class="title">Статус карты</div>
+          <div class="sub"><b>{{ meta.loyalty_status }}</b><br>Покажите карту на кассе, чтобы накопить баллы</div>
+        </div>
+      </section>
       {% endif %}
+
+      {% if show_coupons|default(true) %}
+        {% if bristol_coupons %}
+        <div class="section-head">
+          <h2>Купоны</h2>
+          <a class="all" href="/s/{{ session.id }}/coupons">Все ({{ coupons_count }}) ›</a>
+        </div>
+        <div class="coupon-list">
+          {% for c in bristol_coupons %}
+          <a class="coupon-card" href="/s/{{ session.id }}/b/{{ c.number }}">
+            {% if c.image_url %}
+            <img class="shot" src="{{ c.image_url }}" alt="{{ c.title or 'Купон' }}" loading="lazy" onerror="this.style.display='none'">
+            {% endif %}
+            <div class="coupon-foot">
+              <span class="exp"><span class="dot"></span>{% if c.actual_end %}до {{ c.actual_end[8:10] }}.{{ c.actual_end[5:7] }}.{{ c.actual_end[0:4] }}{% else %}без срока{% endif %}</span>
+              <span class="more">Показать QR ›</span>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="section-head"><h2>Купоны</h2></div>
+        <div class="coupon-empty">Купонов пока нет — они появятся после синхронизации.</div>
+        {% endif %}
+      {% endif %}
+
+      <section class="panel meta">
+        <div>
+          <div class="meta-line">
+            <span class="k">Доступ к карте</span>
+            <b id="accessTime">{% if remaining is not none %}—{% else %}бессрочно{% endif %}</b>
+          </div>
+          {% if remaining is not none %}
+          <div class="accessbar" id="accessBarWrap"><i id="accessBar"></i></div>
+          {% endif %}
+        </div>
+        {% if card_data %}
+        <div class="divider"></div>
+        <div class="refresh-line">
+          <div class="refresh-info">Новый QR через <b id="qrCountdown">60</b> с</div>
+          <button class="refresh-btn" id="refreshBtn" type="button" title="Обновить QR" aria-label="Обновить QR">
+            <svg class="progress" width="38" height="38" viewBox="0 0 38 38">
+              <circle cx="19" cy="19" r="16" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="2.5"/>
+              <circle id="refreshRing" cx="19" cy="19" r="16" fill="none" stroke="#fff" stroke-width="2.5"
+                      stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="0"/>
+            </svg>
+            <span>↻</span>
+          </button>
+        </div>
+        {% endif %}
+        <div class="synced">
+          {% if meta.synced_at %}<span class="ok">●</span> Синхронизировано {{ meta.synced_at[:16]|replace('T', ' ') }}{% else %}<span class="ok">●</span> Данные карты{% endif %}
+        </div>
+      </section>
+
+      <div class="how">
+        <h2>Как действует карта «Мир скидок»</h2>
+        <p>Карта лояльности «Мир скидок» даёт право на получение специальных цен и скидок на товары, обозначенные красным ценником. Скидка применяется перед оплатой покупки после сканирования персональной карты лояльности.</p>
+        <p>Скидка на товар, предоставляемая по карте «Мир скидок», не суммируется с другими акциями на этот же товар.</p>
+        <p>Стоимость алкогольной продукции с применением скидки не может быть ниже уровня минимальной розничной цены, установленной законодательством.</p>
+        <p><a href="#">Полные правила участия</a> · <a href="#">Правила акции «День рождения Бристоль»</a></p>
+      </div>
+
     </div>
 
-    <div class="rules">
-      <a href="#">Полные правила участия</a>, <a href="#">Правила акции «День рождения Бристоль»</a>
-    </div>
-
-    {% if card_data %}
-    <button class="update-btn" id="refreshBtn">
-      <span class="refresh-icon" id="refreshIcon">↻</span>
-      обновить QR-код
-    </button>
-    {% endif %}
-
-    {% if show_coupons|default(true) and coupons_count %}
-    <a class="coupons-btn" href="/s/{{ session.id }}/coupons">
-      <span class="coupons-count">{{ coupons_count }}</span>
-      Все купоны
-    </a>
-    {% endif %}
-
-    {% if remaining is not none %}
-    <div class="access-timer" id="timer" data-rem="{{ remaining }}"></div>
-    {% endif %}
-
-    <div class="how">
-      <h2>Как действует карта «Мир скидок»</h2>
-      <p>Карта лояльности «Мир скидок» даёт право на получение специальных цен и скидок на товары, обозначенные красным ценником. Скидка применяется перед оплатой покупки после сканирования персональной карты лояльности.</p>
-      <p>Скидка на товар, предоставляемая по карте «Мир скидок», не суммируется с другими акциями на этот же товар.</p>
-      <p>Стоимость алкогольной продукции с применением скидки не может быть ниже уровня минимальной розничной цены, установленной законодательством.</p>
-    </div>
-  </div>
-
-  <div class="pay-bar">
-    <div class="pay-inner">
-      <div class="pay-btn">
-        <div class="title">Войти в <span class="ya"><span class="o">Я</span><span class="p">ПЭЙ</span></span></div>
-        <div class="sub">быстрая оплата с кешбеком</div>
+    <div class="paybar">
+      <div class="paycard">
+        <div>
+          <div class="t">Войти в <span class="ya"><span class="o">Я</span><span class="p">ПЭЙ</span></span></div>
+          <div class="s">быстрая оплата с кешбеком</div>
+        </div>
+        <div class="go">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
       </div>
     </div>
   </div>
-
 </div>
 
+{% if card_data %}
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="QR-код для кассира">
+  <button class="close-full" id="closeOverlay" aria-label="Закрыть">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+  </button>
+  <div class="brandline"><span class="b2">Б</span> Мир скидок</div>
+  <div class="bigqr"><img id="qrBig" src="/s/{{ session.id }}/card/qr.png" alt="QR карты лояльности"></div>
+  <h2>Покажите кассиру</h2>
+  <p>Код обновляется автоматически. Экран не погаснет, пока карта открыта.</p>
+  <div class="refresh-pill"><span id="overlayCountdown">60</span> с до обновления кода</div>
+  <div class="wake"><span class="dot"></span> Экран остаётся включённым</div>
+</div>
+{% endif %}
+
+<div class="toast" id="toast">Код обновлён</div>
+
 <script>
+(function () {
+  'use strict';
+
   var SID = '{{ session.id }}';
+  var qrImg = document.getElementById('qr');
+  var qrBig = document.getElementById('qrBig');
+  var hasQr = !!qrImg;
 
-  function qrUrl() { return '/s/' + SID + '/card/qr.png?t=' + Date.now(); }
-
-  function refreshQr() {
-    var img = document.getElementById('qr');
-    if (!img) return;
-    img.style.animation = 'none';
-    void img.offsetWidth;
-    img.style.animation = 'pop 0.35s ease-out';
-    img.src = qrUrl();
+  function qrUrl(regenerate) {
+    return '/s/' + SID + '/card/qr.png?' + (regenerate ? 'refresh=1&' : '') + 't=' + Date.now();
   }
 
-  function regenerateQr() {
-    var img = document.getElementById('qr');
-    if (!img) return;
-    img.style.animation = 'none';
-    void img.offsetWidth;
-    img.style.animation = 'pop 0.35s ease-out';
-    img.src = '/s/' + SID + '/card/qr.png?refresh=1&t=' + Date.now();
+  function refreshQr(regenerate) {
+    if (!hasQr) return;
+    var url = qrUrl(regenerate);
+    qrImg.src = url;
+    if (qrBig) qrBig.src = url;
+    refreshLeft = 60;
+    setCountdown();
+  }
+
+  /* ---------- flip ---------- */
+  var lcard = document.getElementById('lcard');
+  function flip() { lcard.classList.toggle('flipped'); }
+  lcard.addEventListener('click', flip);
+  lcard.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
+  });
+  document.getElementById('flipBtn').addEventListener('click', function (e) {
+    e.stopPropagation(); flip();
+  });
+
+  /* ---------- balance ---------- */
+  var balanceEl = document.getElementById('balanceNum');
+  var ringFill = document.getElementById('ringFill');
+  if (balanceEl) {
+    var balance = parseInt(balanceEl.dataset.balance, 10);
+    if (isNaN(balance)) balance = 0;
+    var ringLen = 2 * Math.PI * 41;
+    var frames = 60, frame = 0;
+    ringFill.style.strokeDasharray = ringLen;
+    ringFill.style.strokeDashoffset = ringLen;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (document.hidden || reduce) {
+      balanceEl.textContent = balance.toLocaleString('ru-RU');
+      ringFill.style.strokeDashoffset = 0;
+    } else {
+      var timer = setInterval(function () {
+        frame++;
+        var p = Math.min(1, frame / frames);
+        var eased = 1 - Math.pow(1 - p, 3);
+        balanceEl.textContent = Math.round(balance * eased).toLocaleString('ru-RU');
+        ringFill.style.strokeDashoffset = ringLen * (1 - eased);
+        if (p >= 1) clearInterval(timer);
+      }, 18);
+    }
+  }
+
+  /* ---------- access timer ---------- */
+  var accessEl = document.getElementById('accessTime');
+  var accessBar = document.getElementById('accessBar');
+  var accessWrap = document.getElementById('accessBarWrap');
+  var remaining = {{ remaining if remaining is not none else 'null' }};
+  var accessLeft = remaining;
+  var accessTotal = {{ access_total if access_total else 'null' }};
+
+  function fmtAccess(s) {
+    var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
+        m = Math.floor(s % 3600 / 60), sec = s % 60;
+    if (d > 0) return d + ' д ' + h + ' ч';
+    if (h > 0) return h + ' ч ' + m + ' мин';
+    if (m > 0) return m + ' мин ' + String(sec).padStart(2, '0') + ' с';
+    return sec + ' с';
+  }
+  function tickAccess() {
+    if (accessLeft === null) return;
+    accessLeft = Math.max(0, accessLeft - 1);
+    accessEl.textContent = fmtAccess(accessLeft);
+    if (accessBar && accessTotal) {
+      accessBar.style.width = Math.min(100, accessLeft / accessTotal * 100).toFixed(2) + '%';
+      accessWrap.classList.toggle('warn', accessLeft <= 900);
+      accessWrap.classList.toggle('danger', accessLeft <= 300);
+    }
+  }
+  if (accessLeft !== null) { accessEl.textContent = fmtAccess(accessLeft); if (accessBar && accessTotal) accessBar.style.width = Math.min(100, accessLeft / accessTotal * 100).toFixed(2) + '%'; }
+
+  /* ---------- QR refresh countdown ---------- */
+  var refreshLeft = 60;
+  var refreshRingLen = 2 * Math.PI * 16;
+  var refreshRing = document.getElementById('refreshRing');
+  var countdownEl = document.getElementById('qrCountdown');
+  var overlayCountdown = document.getElementById('overlayCountdown');
+
+  function setCountdown() {
+    if (countdownEl) countdownEl.textContent = refreshLeft;
+    if (overlayCountdown) overlayCountdown.textContent = refreshLeft;
+    if (refreshRing) {
+      refreshRing.style.strokeDasharray = refreshRingLen;
+      refreshRing.style.strokeDashoffset = refreshRingLen * (1 - refreshLeft / 60);
+    }
   }
 
   var refreshBtn = document.getElementById('refreshBtn');
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function () {
-      var icon = document.getElementById('refreshIcon');
-      if (icon) {
-        icon.classList.remove('spinning');
-        void icon.offsetWidth;
-        icon.classList.add('spinning');
-      }
-      regenerateQr();
+      refreshBtn.classList.remove('spin');
+      void refreshBtn.offsetWidth;
+      refreshBtn.classList.add('spin');
+      refreshQr(true);
+      showToast('Код обновлён');
     });
   }
 
-  setInterval(refreshQr, 60000);
-
-  (function () {
-    var el = document.getElementById('timer');
-    if (!el) return;
-    var v = parseInt(el.dataset.rem, 10);
-    if (isNaN(v)) { el.textContent = ''; return; }
-    function p(n) { return String(n).padStart(2, '0'); }
-    function tick() {
-      var s = Math.max(0, v);
-      var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
-          m = Math.floor(s % 3600 / 60), sec = s % 60;
-      var txt = d > 0 ? (d + 'д ' + h + 'ч ' + m + 'м')
-               : (h > 0 ? (h + ':' + p(m) + ':' + p(sec))
-                        : (m + ':' + p(sec)));
-      el.innerHTML = 'Доступ к карте: <b>' + txt + '</b>';
-      v--;
+  /* ---------- fullscreen ---------- */
+  var overlay = document.getElementById('overlay');
+  var wakeLock = null;
+  function openOverlay() {
+    if (!overlay) return;
+    if (qrBig && qrImg) qrBig.src = qrImg.src;
+    overlay.classList.add('open');
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen').then(function (lock) {
+        wakeLock = lock;
+        lock.addEventListener('release', function () { wakeLock = null; });
+      }).catch(function () {});
     }
-    tick();
-    setInterval(tick, 1000);
-  })();
+  }
+  function closeOverlay() {
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    if (wakeLock) { wakeLock.release().catch(function () {}); wakeLock = null; }
+  }
+  var showBtn = document.getElementById('showBtn');
+  if (showBtn) showBtn.addEventListener('click', openOverlay);
+  var closeBtn = document.getElementById('closeOverlay');
+  if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
+  if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOverlay(); });
+
+  /* ---------- toast ---------- */
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+  function showToast(text) {
+    if (!toastEl) return;
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+  }
+
+  document.querySelector('.paycard').addEventListener('click', function () {
+    showToast('Оплата через Я Пэй');
+  });
+
+  /* ---------- init ---------- */
+  if (hasQr) {
+    setCountdown();
+    setInterval(function () {
+      refreshLeft -= 1;
+      if (refreshLeft <= 0) refreshQr(false);
+      else setCountdown();
+    }, 1000);
+  }
+  if (accessLeft !== null) setInterval(tickAccess, 1000);
 
   function closePage() {
     if (window.history.length > 1) { window.history.back(); }
     else { document.body.style.opacity = '0'; document.body.style.transition = 'opacity .3s'; }
   }
-
-  var lastTouchEnd = 0;
-  document.addEventListener('touchend', function (event) {
-    var now = Date.now();
-    if (now - lastTouchEnd <= 300) { event.preventDefault(); }
-    lastTouchEnd = now;
-  }, false);
+  window.closePage = closePage;
+})();
 </script>
 </body>
 </html>

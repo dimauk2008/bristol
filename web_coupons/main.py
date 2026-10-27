@@ -758,14 +758,28 @@ async def public_card(request: Request, session_id: str):
     aid = s.get('account_id')
     card_data = bristol.get_card_qr(aid)
     try:
-        coupons_count = len(bristol.available_bristol_coupons(aid))
+        bristol_coupons = bristol.available_bristol_coupons(aid)
     except Exception:
-        coupons_count = 0
+        bristol_coupons = []
+    coupons_count = len(bristol_coupons)
+
+    access_total = None
+    exp, created = s.get('expires_at'), s.get('created_at')
+    if exp and created:
+        try:
+            access_total = max(0, int(
+                (datetime.fromisoformat(exp) - datetime.fromisoformat(created)).total_seconds()
+            ))
+        except Exception:
+            access_total = None
+
     return templates.TemplateResponse(request, 'card-ses.html', {
         'session': s,
         'card_data': card_data,
         'remaining': _remaining(s.get('expires_at')),
+        'access_total': access_total,
         'bristol_meta': bristol.get_meta(aid),
+        'bristol_coupons': bristol_coupons[:3],
         'coupons_count': coupons_count,
         'show_coupons': s.get('show_coupons', 1) == 1,
     })

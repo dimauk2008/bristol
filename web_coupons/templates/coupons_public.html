@@ -1,86 +1,365 @@
-{% extends 'base.html' %}
-{% block title %}Купоны — {{session.name}}{% endblock %}
-{% block body_class %}pub{% endblock %}
-
-{% block body %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7d0f12">
+<title>Мои купоны — {{ session.name }}</title>
 <style>
-#clist.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.pcard{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:transform .12s ease,box-shadow .12s ease}
-.pcard:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:#e3e6ec}
-.pcard .pimg{width:100%;height:auto;display:block;background:#f2f3f5;object-fit:contain}
-.pcard .pimg.empty{aspect-ratio:16/10}
-.pcard .pbody{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
-.pcard .pttl{font-weight:700;letter-spacing:-.01em;line-height:1.3}
-.pcard .pcap{color:var(--muted);font-size:12.5px;word-break:break-word}
-.pcard .badge{align-self:flex-start}
-@media (max-width:560px){
-#clist.cgrid{grid-template-columns:1fr}
-}
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --red:#e22326;
+    --red-2:#ff4b4e;
+    --ink:#20161a;
+    --muted:rgba(255,255,255,.68);
+  }
+  html { -webkit-text-size-adjust:100%; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    min-height:100vh;
+    color:#fff;
+    background:#0b0709;
+    display:flex;
+    justify-content:center;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .stage {
+    position:relative; width:100%; max-width:620px; min-height:100vh;
+    padding:20px 20px calc(36px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 70% at 12% -8%, #ff6a4d 0%, transparent 42%),
+      radial-gradient(90% 55% at 98% 6%, #ff2d6f 0%, transparent 40%),
+      linear-gradient(165deg, #e22326 0%, #b81418 42%, #6e0b0e 100%);
+    overflow:hidden;
+    box-shadow:0 30px 90px rgba(0,0,0,.65);
+  }
+  .stage::before, .stage::after {
+    content:''; position:absolute; border-radius:50%; pointer-events:none;
+    filter:blur(60px); opacity:.4;
+  }
+  .stage::before { width:300px; height:300px; left:-130px; top:140px; background:#ff8a00; }
+  .stage::after { width:280px; height:280px; right:-150px; top:460px; background:#ff1f6b; }
+  .grain {
+    position:absolute; inset:0; pointer-events:none; opacity:.2; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  }
+  .content { position:relative; z-index:2; }
+
+  .top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff; }
+  .brand .b {
+    width:40px; height:40px; border-radius:50%;
+    background:#fff; color:var(--red);
+    display:flex; align-items:center; justify-content:center;
+    font:900 26px/1 Arial,sans-serif;
+    box-shadow:0 6px 16px rgba(0,0,0,.18); flex:none;
+  }
+  .brand .name {
+    font-family:'Arial Narrow',Arial,sans-serif;
+    font-size:22px; font-weight:900; letter-spacing:1.2px;
+    text-shadow:0 1px 2px rgba(0,0,0,.2); white-space:nowrap;
+  }
+  .card-link {
+    display:inline-flex; align-items:center; gap:7px;
+    text-decoration:none; color:#fff; font-size:12.5px; font-weight:700;
+    padding:9px 13px; border-radius:999px;
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.24);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    white-space:nowrap;
+  }
+  .card-link:active { transform:scale(.97); }
+
+  .head { margin-top:24px; }
+  .title-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .head h1 { font-size:28px; font-weight:900; letter-spacing:-.035em; }
+  .count {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:30px; height:30px; padding:0 9px; border-radius:999px;
+    background:#fff; color:#a51216; font-size:14px; font-weight:900;
+    box-shadow:0 4px 12px rgba(0,0,0,.16);
+  }
+  .head p { margin-top:6px; font-size:13.5px; color:rgba(255,255,255,.78); }
+  .remaining {
+    display:inline-flex; align-items:center; gap:7px; margin-top:12px;
+    padding:6px 12px; border-radius:999px; font-size:12px; font-weight:700;
+    background:rgba(0,0,0,.16); border:1px solid rgba(255,255,255,.18);
+  }
+  .remaining .dot { width:7px; height:7px; border-radius:50%; background:#7ee2a8; animation:blink 2s infinite; }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+  .search-wrap { margin-top:18px; position:relative; }  .search-wrap svg {
+    position:absolute; left:15px; top:50%; transform:translateY(-50%);
+    width:18px; height:18px; color:rgba(255,255,255,.55); pointer-events:none;
+  }
+  .search {
+    width:100%; border:1px solid rgba(255,255,255,.22); outline:none;
+    background:rgba(20,8,12,.22); color:#fff; font:inherit; font-size:14px;
+    border-radius:15px; padding:14px 16px 14px 44px;
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    transition:border .2s ease, background .2s ease;
+  }
+  .search::placeholder { color:rgba(255,255,255,.5); }
+  .search:focus { border-color:rgba(255,255,255,.5); background:rgba(20,8,12,.3); }
+
+  .cats {
+    display:flex; gap:8px; margin-top:12px; padding-bottom:2px;
+    overflow-x:auto; scrollbar-width:none;
+  }
+  .cats::-webkit-scrollbar { display:none; }
+  .cat {
+    flex:none; display:inline-flex; align-items:center; gap:7px;
+    border:1px solid rgba(255,255,255,.22);
+    background:rgba(255,255,255,.10); color:#fff;
+    border-radius:999px; padding:9px 14px;
+    font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    transition:transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
+    white-space:nowrap;
+  }
+  .cat:active { transform:scale(.97); }
+  .cat .n {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:19px; height:19px; padding:0 6px; border-radius:999px;
+    background:rgba(0,0,0,.20); font-size:10.5px; font-weight:800;
+  }
+  .cat.active { background:#fff; color:#a51216; border-color:#fff; }
+  .cat.active .n { background:rgba(165,18,22,.10); color:#a51216; }
+
+  .section-head { display:flex; align-items:center; justify-content:space-between; margin:24px 2px 12px; }
+  .section-head h2 { font-size:17px; font-weight:800; letter-spacing:-.01em; }
+  .section-head .hint { font-size:11.5px; color:rgba(255,255,255,.55); font-weight:600; }
+
+  .coupon-list { display:flex; flex-direction:column; gap:12px; }
+  .coupon-card {
+    display:block; text-decoration:none; color:inherit;
+    background:#fff; border-radius:18px; overflow:hidden;
+    box-shadow:0 14px 34px rgba(40,0,2,.22);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .coupon-card:active { transform:scale(.99); }
+  .coupon-card .shot { display:block; width:100%; height:auto; background:#f6f2f3; }
+  .coupon-card .shot.empty {
+    aspect-ratio:686/250; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#ff6a4d,#c0171b);
+    font-size:34px; font-weight:900; letter-spacing:-.04em; color:#fff;
+  }
+  .coupon-foot {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 14px; font-size:12px; font-weight:600; color:#7a6a70;
+  }
+  .coupon-foot .exp { display:inline-flex; align-items:center; gap:6px; min-width:0; }
+  .coupon-foot .exp .dot { width:6px; height:6px; border-radius:50%; background:#f79009; flex:none; }
+  .coupon-foot .exp .num { color:#a99ba1; font-weight:700; font-size:11px; }
+  .coupon-foot .more { color:#c0171b; font-weight:800; white-space:nowrap; }
+
+  .gift-list { display:flex; flex-direction:column; gap:10px; }
+  .gift {
+    display:flex; align-items:center; gap:12px;
+    background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.16);
+    border-radius:18px; padding:14px;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  }
+  .gift .grow { flex:1; min-width:0; }
+  .gift .code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:14px; font-weight:700; word-break:break-all; }
+  .gift .cap { margin-top:4px; font-size:12px; color:rgba(255,255,255,.62); }
+  .gift .btn {
+    flex:none; text-decoration:none; cursor:pointer;
+    background:#fff; color:#a51216; border:0; border-radius:12px;
+    padding:10px 14px; font:inherit; font-size:12.5px; font-weight:800;
+    box-shadow:0 6px 16px rgba(0,0,0,.16); transition:transform .2s ease;
+  }
+  .gift .btn:active { transform:scale(.96); }
+
+  .empty {
+    margin-top:12px; padding:26px 20px; border-radius:18px; text-align:center;
+    background:rgba(255,255,255,.09); border:1px dashed rgba(255,255,255,.26);
+    font-size:13px; line-height:1.5; color:rgba(255,255,255,.75);
+  }
+  .empty b { color:#fff; }
+  .hidden { display:none !important; }
+
+  .back { margin-top:26px; text-align:center; }
+  .back a {
+    display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+    color:rgba(255,255,255,.8); font-size:13px; font-weight:700;
+    padding:11px 18px; border-radius:999px;
+    background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.2);
+  }
+
+  @media (max-width:420px) {
+    .stage { padding:16px 16px calc(30px + env(safe-area-inset-bottom)); }
+    .brand .name { font-size:19px; letter-spacing:1px; }
+    .head h1 { font-size:24px; }
+    .card-link { padding:8px 11px; font-size:12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; transition:none !important; }
+  }
 </style>
-<div class='header'>
-  <div class='inner'>
-    <a class='brand' href='/s/{{session.id}}/card' style='text-decoration:none'>
-      <span class='logo'>B</span>
-      <span>Bristol<small>Купоны · {{session.name}}</small></span>
-    </a>
-    <span class='spacer'></span>
-    <a class='btn sm ghost' href='/s/{{session.id}}/card'>Карта</a>
-  </div>
-</div>
+</head>
+<body>
+<div class="stage">
+  <div class="grain"></div>
+  <div class="content">
 
-<div class='wrap' style='max-width:760px'>
-  <div class='card' style='padding:16px 20px'>
-    <div class='sectionhead' style='margin:0'>
-      <h2>Мои купоны</h2>
-      <span class='count'>{{ bristol_coupons|length }}</span>
-      <span class='spacer'></span>
-      <input id='csearch' placeholder='Поиск' style='max-width:220px'>
+    <div class="top">
+      <a class="brand" href="/s/{{ session.id }}/card">
+        <span class="b">Б</span>
+        <span class="name">МИР СКИДОК</span>
+      </a>
+      <a class="card-link" href="/s/{{ session.id }}/card">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>
+        Карта
+      </a>
     </div>
-  </div>
 
-  {% if bristol_coupons %}
-  <div class='cgrid mt2' id='clist'>
-    {% for c in bristol_coupons %}
-    <a class='pcard' data-search='{{c.number}} {{c.universal_coupon}}' href='/s/{{session.id}}/b/{{c.number}}'>
-      {% if c.image_url %}<img class='pimg' src='{{c.image_url}}' loading='lazy' onerror="this.style.visibility='hidden'">{% else %}<div class='pimg empty'></div>{% endif %}
-      <div class='pbody'>
-        <div class='pttl'>{{ c.title or c.universal_coupon or c.number }}</div>
-        <div class='pcap'><span class='mono'>{{ c.number }}</span>{% if c.actual_end %} · до {{ c.actual_end[:10] }}{% endif %}</div>
-        <span class='badge red'>Показать QR</span>
+    <div class="head">
+      <div class="title-row">
+        <h1>Мои купоны</h1>
+        <span class="count">{{ bristol_coupons|length }}</span>
       </div>
-    </a>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class='card mt2'><div class='empty'>Купонов нет или они ещё не синхронизированы.</div></div>
-  {% endif %}
+      <p>Покажите QR-код купона на кассе перед оплатой</p>
+      {% if remaining is not none %}
+      <div class="remaining"><span class="dot"></span> Доступ к купонам: <b id="remaining">—</b></div>
+      {% endif %}
+    </div>
 
-  {% if coupons %}
-  <div class='card mt2'>
-    <div class='sectionhead'><h2>Подарочные купоны</h2></div>
-    <div class='list'>
-      {% for c in coupons %}
-      <div class='item'>
-        <div class='grow'>
-          <div class='ttl mono'>{{ c.code }}</div>
-          <div class='cap'>{{ c.value }} · {{ c.note or '' }}</div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input class="search" id="csearch" type="search" placeholder="Найти купон по названию или номеру" autocomplete="off">
+    </div>
+
+    {% if bristol_coupons %}
+    <div class="cats" id="cats" role="tablist" aria-label="Категории купонов">
+      <button class="cat active" type="button" data-cat="all" role="tab" aria-selected="true">Все <span class="n" data-count="all">{{ bristol_coupons|length }}</span></button>
+      <button class="cat" type="button" data-cat="FOOD" role="tab" aria-selected="false">Продукты <span class="n" data-count="FOOD">0</span></button>
+      <button class="cat" type="button" data-cat="ALKO" role="tab" aria-selected="false">Алкоголь <span class="n" data-count="ALKO">0</span></button>
+      <button class="cat" type="button" data-cat="PIVO" role="tab" aria-selected="false">Пиво <span class="n" data-count="PIVO">0</span></button>
+    </div>
+    {% endif %}
+
+    {% if bristol_coupons %}
+    <div class="section-head"><h2>Купоны Bristol</h2><span class="hint">{{ bristol_coupons|length }} доступно</span></div>
+    <div class="coupon-list" id="clist">
+      {% for c in bristol_coupons %}
+      {% set cat = c.number[:4] if c.number[:4] in ('FOOD', 'ALKO', 'PIVO') else 'OTHER' %}
+      <a class="coupon-card" href="/s/{{ session.id }}/b/{{ c.number }}" data-cat="{{ cat }}" data-search="{{ c.number }} {{ c.universal_coupon or '' }} {{ c.title or '' }}">
+        {% if c.image_url %}
+        <img class="shot" src="{{ c.image_url }}" alt="{{ c.title or 'Купон Bristol' }}" loading="lazy" onerror="this.classList.add('empty');this.removeAttribute('src');this.alt='Показать купон';">
+        {% endif %}
+        <div class="coupon-foot">
+          <span class="exp"><span class="dot"></span>{% if c.actual_end %}до {{ c.actual_end[8:10] }}.{{ c.actual_end[5:7] }}.{{ c.actual_end[0:4] }}{% else %}без срока{% endif %} <span class="num">· № {{ c.number }}</span></span>
+          <span class="more">Показать QR ›</span>
         </div>
-        <a class='btn sm success' href='/s/{{session.id}}/coupon/{{c.code}}' onclick="return confirm('Получить купон {{c.code}}?')">Получить</a>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if coupons %}
+    <div class="section-head"><h2>Подарочные купоны</h2><span class="hint">{{ coupons|length }}</span></div>
+    <div class="gift-list">
+      {% for c in coupons %}
+      <div class="gift">
+        <div class="grow">
+          <div class="code">{{ c.code }}</div>
+          <div class="cap">{{ c.value }}{% if c.note %} · {{ c.note }}{% endif %}</div>
+        </div>
+        <a class="btn" href="/s/{{ session.id }}/coupon/{{ c.code }}" onclick="return confirm('Получить купон {{ c.code }}?')">Получить</a>
       </div>
       {% endfor %}
     </div>
+    {% endif %}
+
+    {% if not bristol_coupons and not coupons %}
+    <div class="empty"><b>Купонов пока нет.</b><br>Они появятся здесь после синхронизации с картой лояльности.</div>
+    {% endif %}
+
+    <div class="empty hidden" id="noResults">Ничего не найдено. Попробуйте другой запрос.</div>
+
+    <div class="back">
+      <a href="/s/{{ session.id }}/card">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        Вернуться к карте
+      </a>
+    </div>
+
   </div>
-  {% endif %}
 </div>
 
 <script>
-var q=document.getElementById('csearch');
-if(q){ q.addEventListener('input', function(){
-  var v=this.value.toLowerCase().trim();
-  document.querySelectorAll('#clist .pcard').forEach(function(el){
-    var hay=(el.dataset.search||'').toLowerCase();
-    el.style.display=(!v||hay.indexOf(v)>=0)?'':'none';
+(function () {
+  'use strict';
+
+  /* ---------- категории + поиск ---------- */
+  var q = document.getElementById('csearch');
+  var noResults = document.getElementById('noResults');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#clist .coupon-card'));
+  var catButtons = Array.prototype.slice.call(document.querySelectorAll('#cats .cat'));
+  var activeCat = 'all';
+
+  // counts per category
+  var counts = { all: cards.length, FOOD: 0, ALKO: 0, PIVO: 0, OTHER: 0 };
+  cards.forEach(function (card) {
+    var c = card.dataset.cat || 'OTHER';
+    counts[c] = (counts[c] || 0) + 1;
   });
-});}
+  catButtons.forEach(function (btn) {
+    var cat = btn.dataset.cat;
+    var n = btn.querySelector('[data-count]');
+    if (n) n.textContent = counts[cat] || 0;
+    if (cat !== 'all' && !counts[cat]) btn.classList.add('hidden');
+  });
+
+  function applyFilters() {
+    var v = q ? q.value.toLowerCase().trim() : '';
+    var visible = 0;
+    cards.forEach(function (el) {
+      var inCat = activeCat === 'all' || el.dataset.cat === activeCat;
+      var hay = (el.dataset.search || '').toLowerCase();
+      var show = inCat && (!v || hay.indexOf(v) >= 0);
+      el.classList.toggle('hidden', !show);
+      if (show) visible++;
+    });
+    if (noResults) noResults.classList.toggle('hidden', visible > 0 || (!v && activeCat === 'all'));
+  }
+
+  if (q) q.addEventListener('input', applyFilters);
+  catButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      activeCat = btn.dataset.cat;
+      catButtons.forEach(function (b) {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+      });
+      applyFilters();
+    });
+  });
+
+  /* ---------- таймер доступа ---------- */
+  var remEl = document.getElementById('remaining');
+  var remaining = {{ remaining if remaining is not none else 'null' }};
+  if (remEl && remaining !== null) {
+    var left = remaining;
+    function fmt(s) {
+      var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
+          m = Math.floor(s % 3600 / 60), sec = s % 60;
+      if (d > 0) return d + ' д ' + h + ' ч';
+      if (h > 0) return h + ' ч ' + m + ' мин';
+      if (m > 0) return m + ' мин ' + String(sec).padStart(2, '0') + ' с';
+      return sec + ' с';
+    }
+    function tick() {
+      left = Math.max(0, left - 1);
+      remEl.textContent = fmt(left);
+    }
+    remEl.textContent = fmt(left);
+    setInterval(tick, 1000);
+  }
+})();
 </script>
-{% endblock %}
+</body>
+</html>
