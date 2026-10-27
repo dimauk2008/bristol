@@ -871,16 +871,64 @@ def _api_get(path: str, token: str | None = None, timeout: int = 20, _retry: boo
         if e.code == 401 and _retry:
             return _api_get(path, get_token(force=True), timeout, _retry=False)
         body = e.read().decode('utf-8', 'ignore')
-        raise BristolError(
-            'Сессия Бристоля истекла. Откройте приложение Бристоль и повторите синхронизацию.'
-            if e.code in (401, 403) else f'API Бристоля: HTTP {e.code} {body[:200]}'
-        )
+        if e.code in (401, 403):
+            raise BristolError(
+                'Сессия Бристоля истекла. Откройте приложение Бристоль и повторите синхронизацию.'
+            )
+        hint = ''
+        if e.code == 422:
+            hint = ' (ошибка в данных на стороне API Бристоля)'
+        raise BristolError(f'API Бристоля: HTTP {e.code}{hint} {body[:600]}')
     except urllib.error.URLError as e:
         raise BristolError(f'Ошибка запроса к API: {e}')
 
 
+_COUPON_PATHS = (
+    '/api/v2/coupons?consumer=mobile&status=3',
+    '/api/v2/coupons?consumer=mobile',
+    '/api/v2/coupons?consumer=mobile&status=3&coupon_type=product',
+    '/api/v2/coupons?consumer=mobile&status=3&coupon_type=universal',
+)
+
+
+def _is_retryable_api_error(exc: Exception) -> bool:
+    text = str(exc)
+    if 'HTTP 422' in text:
+        return True
+    return any(f'HTTP {code}' in text for code in (500, 502, 503, 504))
+
+
 def fetch_coupons(token: str | None = None) -> dict:
-    return _api_get('/api/v2/coupons?consumer=mobile&status=3', token)
+    """Список купонов. Если Бристоль отвечает 422/5xx, пробуем варианты запроса.
+
+    422 обычно означает, что API не смог разобрать свои же данные по одному
+    из купонов — тогда без статуса/с фильтром по типу может вернуться рабочий
+    список. Если не помогло ни одно вариантов, поднимаем исходную ошибку.
+    """
+    if token is None:
+        token = get_token()
+    first_error: BristolError | None = None
+    last_error: BristolError | None = None
+    for path in _COUPON_PATHS:
+        try:
+            data = _api_get(path, token)
+        except BristolError as e:
+            last_error = e
+            if first_error is None:
+                first_error = e
+            if _is_retryable_api_error(e):
+                log.warning('купоны: %s не сработал (%s), пробую другой вариант', path, e)
+                continue
+            raise
+        coupons = data.get('coupons')
+        if isinstance(coupons, list):
+            if path != _COUPON_PATHS[0]:
+                log.info('купоны получены резервным запросом %s (купонов: %s)', path, len(coupons))
+            return data
+        last_error = BristolError(f'API Бристоля вернул неожиданный ответ на {path}')
+        if first_error is None:
+            first_error = last_error
+    raise first_error or last_error or BristolError('Не удалось получить купоны Бристоля.')
 
 
 def generate_card_codes(token: str | None = None, _retry: bool = True) -> dict:
@@ -988,7 +1036,10 @@ def sync(account_id=None) -> dict:
 def _sync_impl(account_id=None) -> dict:
     aid = _aid(account_id)
     token = get_token(account_id=aid)
-    coupons = fetch_coupons(token).get('coupons') or []
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Пользователь и карта обновляются независимо от купонов: ошибка в данных
+    # купонов на стороне Бристоля не должна останавливать обновление QR карты.
     user = _api_get('/api/v2/users/?consumer=mobile', token).get('user') or {}
     try:
         codes = generate_card_codes(token).get('discount_card_codes') or []
@@ -999,53 +1050,65 @@ def _sync_impl(account_id=None) -> dict:
         card_qr = current_qr(schedule) if schedule else ''
     except BristolError:
         card_qr = ''
-    now = datetime.now(timezone.utc).isoformat()
 
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM bristol_coupons WHERE account_id=?', (aid,))
-    local_images = _cache_coupon_images(coupons, token)
-    ocr_meta = _ocr_coupon_meta(coupons, local_images)
-    for c in coupons:
-        num = c.get('number')
-        discount, title = ocr_meta.get(num, (None, None))
-        cur.execute(
-            '''INSERT INTO bristol_coupons
-               (account_id, number, universal_coupon, coupon_type, image_url, actual_start, actual_end, discount, title, synced_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?)
-               ON CONFLICT(account_id, number) DO UPDATE SET
-                 universal_coupon=excluded.universal_coupon,
-                 coupon_type=excluded.coupon_type,
-                 image_url=excluded.image_url,
-                 actual_start=excluded.actual_start,
-                 actual_end=excluded.actual_end,
-                 discount=COALESCE(excluded.discount, bristol_coupons.discount),
-                 title=COALESCE(excluded.title, bristol_coupons.title),
-                 synced_at=excluded.synced_at''',
-            (
-                aid,
-                num,
-                c.get('universal_coupon'),
-                c.get('coupon_type'),
-                local_images.get(num, c.get('image_url')),
-                c.get('actual_start'),
-                c.get('actual_end'),
-                discount,
-                title,
-                now,
-            ),
-        )
-    conn.commit()
-    conn.close()
+    coupons = None
+    coupons_error = ''
+    try:
+        coupons = fetch_coupons(token).get('coupons') or []
+    except BristolError as e:
+        coupons_error = str(e)
+        log.warning('account %s: купоны не обновлены: %s', aid, coupons_error)
+
+    if coupons is not None:
+        local_images = _cache_coupon_images(coupons, token)
+        ocr_meta = _ocr_coupon_meta(coupons, local_images)
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute('DELETE FROM bristol_coupons WHERE account_id=?', (aid,))
+        for c in coupons:
+            num = c.get('number')
+            discount, title = ocr_meta.get(num, (None, None))
+            cur.execute(
+                '''INSERT INTO bristol_coupons
+                   (account_id, number, universal_coupon, coupon_type, image_url, actual_start, actual_end, discount, title, synced_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(account_id, number) DO UPDATE SET
+                     universal_coupon=excluded.universal_coupon,
+                     coupon_type=excluded.coupon_type,
+                     image_url=excluded.image_url,
+                     actual_start=excluded.actual_start,
+                     actual_end=excluded.actual_end,
+                     discount=COALESCE(excluded.discount, bristol_coupons.discount),
+                     title=COALESCE(excluded.title, bristol_coupons.title),
+                     synced_at=excluded.synced_at''',
+                (
+                    aid,
+                    num,
+                    c.get('universal_coupon'),
+                    c.get('coupon_type'),
+                    local_images.get(num, c.get('image_url')),
+                    c.get('actual_start'),
+                    c.get('actual_end'),
+                    discount,
+                    title,
+                    now,
+                ),
+            )
+        conn.commit()
+        conn.close()
+
+    previous = get_meta(aid)
     meta = {
         'phone': user.get('phone', ''),
         'name': ' '.join(x for x in (user.get('first_name'), user.get('last_name')) if x),
         'balance': user.get('status_active_balance'),
         'loyalty_status': user.get('loyalty_status', ''),
         'synced_at': now,
-        'coupon_count': len(coupons),
+        'coupon_count': len(coupons) if coupons is not None else previous.get('coupon_count', 0),
         'card_qr': card_qr,
         'card_schedule': schedule,
+        'last_coupons_error': coupons_error,
+        'last_error': f'Купоны не обновлены: {coupons_error}' if coupons_error else '',
     }
     for k, v in meta.items():
         _set_meta(aid, k, v)

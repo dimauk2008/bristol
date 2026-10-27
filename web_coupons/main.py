@@ -415,8 +415,8 @@ async def api_admin_coupons():
 async def bristol_sync():
     aid = get_active_account_id()
     try:
-        await run_in_threadpool(bristol.sync, aid)
-        msg = ''
+        meta = await run_in_threadpool(bristol.sync, aid)
+        msg = (meta or {}).get('last_error') or ''
     except BristolError as e:
         msg = str(e)
     except Exception as e:
