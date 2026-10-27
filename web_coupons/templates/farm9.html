@@ -178,11 +178,30 @@
         <label for="creds_file">Аккаунт (файл кредов)</label>
         <div style="display:flex;gap:8px">
           <select id="creds_file" style="flex:1"></select>
+          <button type="button" class="btn ghost sm" id="btnUploadCreds" title="Загрузить JSON кредов">＋</button>
           <button type="button" class="btn ghost sm" id="btnReloadCreds" title="Обновить список">⟳</button>
+          <input type="file" id="credsFileInput" accept=".json,application/json" hidden>
         </div>
         <div class="f9-hint hidden" id="credsHint"></div>
       </div>
     </div>
+
+    <details class="adv" id="credsBox">
+      <summary>Файлы кредов: загрузка и удаление</summary>
+      <div class="mt2">
+        <div class="f9-toolbar">
+          <div class="left">
+            <button type="button" class="btn ghost sm" id="btnUploadCreds2">＋ Загрузить JSON</button>
+          </div>
+          <div class="right muted small">
+            Загруженные файлы: <span class="mono" id="credsDirLabel">—</span>
+          </div>
+        </div>
+        <div class="muted small mt">Файл должен содержать <span class="mono">user_id</span> и <span class="mono">hash</span>.
+          Файлы из <span class="mono">capture/</span> доступны только для чтения.</div>
+        <div id="credsList" class="list mt2"></div>
+      </div>
+    </details>
 
     <details class="adv" id="advBox">
       <summary>Дополнительно: задержка и минимальный подарок</summary>
@@ -404,14 +423,42 @@
   });
 
   /* ---------- creds ---------- */
-  async function loadCreds() {
+  function renderCredsList(data) {
+    const items = data.creds || [];
+    state.creds = items;
+    setText('credsDirLabel', data.creds_dir || '—');
+    const box = $('credsList');
+    if (!items.length) {
+      box.innerHTML = '<div class="muted small">Пока нет ни одного файла кредов.</div>';
+      return;
+    }
+    box.innerHTML = items.map((item) => {
+      const source = item.source === 'data' ? 'загружен в панель' : 'из capture (только чтение)';
+      const badge = item.valid
+        ? '<span class="badge ok">валиден</span>'
+        : '<span class="badge bad">нет user_id/hash</span>';
+      const del = item.editable
+        ? '<button type="button" class="btn danger sm" data-del="' + escapeHtml(item.name) + '">Удалить</button>'
+        : '';
+      return '<div class="item">' +
+        '<div class="grow"><div class="ttl">' + escapeHtml(item.name) + '</div>' +
+        '<div class="cap">' + escapeHtml(item.user_id ? String(item.user_id) : 'нет user_id') + ' · ' + source + '</div></div>' +
+        '<div class="actions">' + badge + del + '</div></div>';
+    }).join('');
+    box.querySelectorAll('[data-del]').forEach((btn) => {
+      btn.addEventListener('click', () => deleteCreds(btn.dataset.del));
+    });
+  }
+
+  async function loadCreds(preferred) {
     const select = $('creds_file');
     const hint = $('credsHint');
-    const saved = select.dataset.saved || select.value;
+    const saved = preferred || select.dataset.saved || select.value;
     try {
       const data = await api('/api/farm9/creds');
       const items = data.creds || [];
       select.innerHTML = '';
+      renderCredsList(data);
       if (!items.length) {
         const opt = document.createElement('option');
         opt.value = '';
@@ -420,8 +467,8 @@
         select.disabled = true;
         state.credsEmpty = true;
         hint.classList.remove('hidden');
-        hint.innerHTML = 'В папке <span class="mono">' + escapeHtml(data.capture_dir || 'capture') +
-          '</span> нет <span class="mono">credentials*.json</span>. Смонтируйте файл кредов в контейнер.';
+        hint.innerHTML = 'Нет файлов кредов. Нажмите <b>＋</b> и загрузите JSON — он сохранится в ' +
+          '<span class="mono">' + escapeHtml(data.creds_dir || 'data/credentials') + '</span>.';
         return;
       }
       select.disabled = false;
@@ -438,12 +485,61 @@
       if (wanted && items.some((i) => i.name === wanted)) select.value = wanted;
       select.dataset.saved = select.value;
       saveSettings();
+      updateUI(state.stats || {});
     } catch (e) {
       if (e.message !== 'unauthorized') toastError('Не удалось загрузить список кредов: ' + e.message);
     }
   }
 
-  $('btnReloadCreds').addEventListener('click', loadCreds);
+  async function uploadCredsFile(file) {
+    if (!file) return;
+    if (file.size > 200000) { toastError('Файл больше 200 КБ'); return; }
+    let text;
+    try { text = await file.text(); } catch (e) { toastError('Не удалось прочитать файл'); return; }
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (e) { toastError('Это не корректный JSON'); return; }
+    if (!parsed || typeof parsed !== 'object' || !parsed.user_id || !(parsed.hash || parsed.token)) {
+      toastError('В файле должны быть поля user_id и hash');
+      return;
+    }
+    try {
+      await api('/api/farm9/creds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name, content: text }),
+      });
+      if (window.toast) window.toast('Аккаунт загружен');
+      await loadCreds(file.name);
+    } catch (e) {
+      if (e.message !== 'unauthorized') toastError('Не удалось загрузить: ' + e.message);
+    }
+  }
+
+  async function deleteCreds(name) {
+    if (!window.confirm('Удалить файл ' + name + '?')) return;
+    try {
+      await api('/api/farm9/creds/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name }),
+      });
+      if (window.toast) window.toast('Файл удалён');
+      if ($('creds_file').value === name) $('creds_file').dataset.saved = '';
+      await loadCreds();
+    } catch (e) {
+      if (e.message !== 'unauthorized') toastError('Не удалось удалить: ' + e.message);
+    }
+  }
+
+  $('btnReloadCreds').addEventListener('click', () => loadCreds());
+  ['btnUploadCreds', 'btnUploadCreds2'].forEach((id) => {
+    $(id).addEventListener('click', () => $('credsFileInput').click());
+  });
+  $('credsFileInput').addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    await uploadCredsFile(file);
+  });
 
   /* ---------- stats rendering ---------- */
   function setText(id, value) {

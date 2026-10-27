@@ -15,6 +15,7 @@ farm_bot/
 .gitignore
 .venv/
 venv/
+data/
 
 # СЃРµРєСЂРµС‚С‹ Рё Р»РѕРєР°Р»СЊРЅС‹Рµ РґР°РЅРЅС‹Рµ
 cookies.json

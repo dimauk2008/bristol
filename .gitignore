@@ -18,6 +18,8 @@ capture/hive.hive
 .env
 
 # --- РІСЂРµРјРµРЅРЅС‹Рµ С‚РµСЃС‚РѕРІС‹Рµ Р‘Р” ---
+# local uploaded credentials
+data/
 capture/_*.sqlite
 
 # --- РљСЂСѓРїРЅС‹Рµ Р±РёРЅР°СЂРЅРёРєРё Рё Р°СЂС‚РµС„Р°РєС‚С‹ ---

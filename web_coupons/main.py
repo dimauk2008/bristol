@@ -27,7 +27,14 @@ import scheduler
 from bristol import BristolError
 
 # Farm9 web control
-from farm9_web import farm9_controller, CAPTURE_DIR as FARM9_CAPTURE_DIR, VERSIONS as FARM9_VERSIONS
+from farm9_web import (
+    farm9_controller,
+    CAPTURE_DIR as FARM9_CAPTURE_DIR,
+    CREDS_DIR as FARM9_CREDS_DIR,
+    VERSIONS as FARM9_VERSIONS,
+    list_creds as farm9_list_creds,
+    resolve_creds_file as farm9_resolve_creds,
+)
 
 
 @asynccontextmanager
@@ -939,13 +946,12 @@ async def farm9_start(request: Request):
         return JSONResponse({'error': f'Неизвестная стратегия: {version}'}, status_code=400)
 
     creds_file = str(body.get('creds_file') or 'credentials.account5.json')
-    if Path(creds_file).name != creds_file or '\\' in creds_file or not creds_file.endswith('.json'):
-        return JSONResponse({'error': 'Некорректное имя файла кредов'}, status_code=400)
-    creds_path = FARM9_CAPTURE_DIR / creds_file
-    if not creds_path.is_file():
+    creds_path = farm9_resolve_creds(creds_file)
+    if creds_path is None:
         return JSONResponse(
             {'error': f'Файл кредов не найден: {creds_file}. '
-                      f'Смонтируйте его в {FARM9_CAPTURE_DIR} или выберите другой.'},
+                      f'Загрузите JSON в панели (сохраняется в {FARM9_CREDS_DIR}) '
+                      f'или смонтируйте его в {FARM9_CAPTURE_DIR}.'},
             status_code=400,
         )
 
@@ -974,26 +980,14 @@ async def farm9_stop(request: Request):
     return JSONResponse({'ok': True})
 
 
-def _farm9_creds_list() -> list[dict]:
-    """List credential files available in the capture folder."""
-    items: list[dict] = []
-    try:
-        paths = sorted(FARM9_CAPTURE_DIR.glob('credentials*.json'))
-    except OSError:
-        return items
-    for path in paths:
-        if not path.is_file():
-            continue
-        info: dict = {'name': path.name, 'user_id': None, 'valid': False}
-        try:
-            data = json.loads(path.read_text(encoding='utf-8'))
-            if isinstance(data, dict):
-                info['user_id'] = data.get('user_id')
-                info['valid'] = bool(data.get('user_id') and data.get('hash'))
-        except (OSError, ValueError):
-            pass
-        items.append(info)
-    return items
+def _safe_creds_name(raw) -> str | None:
+    """Validate a credentials file name (no paths, .json only)."""
+    name = str(raw or '').strip()
+    if not name or not name.endswith('.json'):
+        return None
+    if Path(name).name != name or '/' in name or '\\' in name:
+        return None
+    return name
 
 
 @app.get('/api/farm9/creds')
@@ -1001,10 +995,79 @@ async def farm9_creds(request: Request):
     """List credential files for the start form."""
     if not _is_admin(request):
         return JSONResponse({'error': 'unauthorized'}, status_code=401)
-    creds = _farm9_creds_list()
+    creds = farm9_list_creds()
     names = [c['name'] for c in creds]
     default = 'credentials.account5.json' if 'credentials.account5.json' in names else (names[0] if names else '')
-    return JSONResponse({'creds': creds, 'default': default, 'capture_dir': str(FARM9_CAPTURE_DIR)})
+    return JSONResponse({
+        'creds': creds,
+        'default': default,
+        'capture_dir': str(FARM9_CAPTURE_DIR),
+        'creds_dir': str(FARM9_CREDS_DIR),
+    })
+
+
+@app.post('/api/farm9/creds')
+async def farm9_creds_upload(request: Request):
+    """Upload a credentials JSON file into the writable credentials folder."""
+    if not _is_admin(request):
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({'error': 'Ожидается JSON'}, status_code=400)
+    if not isinstance(body, dict):
+        return JSONResponse({'error': 'Ожидается JSON-объект'}, status_code=400)
+
+    name = _safe_creds_name(body.get('name'))
+    if name is None:
+        return JSONResponse({'error': 'Некорректное имя файла (нужно *.json без пути)'}, status_code=400)
+
+    content = body.get('content')
+    if not isinstance(content, str) or not content.strip():
+        return JSONResponse({'error': 'Пустое содержимое файла'}, status_code=400)
+    if len(content) > 200_000:
+        return JSONResponse({'error': 'Файл слишком большой (лимит 200 КБ)'}, status_code=400)
+    try:
+        data = json.loads(content)
+    except ValueError:
+        return JSONResponse({'error': 'Содержимое не является корректным JSON'}, status_code=400)
+    if not isinstance(data, dict):
+        return JSONResponse({'error': 'В JSON должен быть объект'}, status_code=400)
+    if not data.get('user_id') or not (data.get('hash') or data.get('token')):
+        return JSONResponse({'error': 'В файле должны быть поля user_id и hash'}, status_code=400)
+
+    try:
+        FARM9_CREDS_DIR.mkdir(parents=True, exist_ok=True)
+        target = FARM9_CREDS_DIR / name
+        tmp = target.with_name(target.name + '.tmp')
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+        os.replace(tmp, target)
+    except OSError as exc:
+        return JSONResponse({'error': f'Не удалось сохранить файл: {exc}'}, status_code=500)
+
+    return JSONResponse({'ok': True, 'name': name})
+
+
+@app.post('/api/farm9/creds/delete')
+async def farm9_creds_delete(request: Request):
+    """Delete an uploaded credentials file (files from capture/ are read-only)."""
+    if not _is_admin(request):
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    name = _safe_creds_name((body or {}).get('name'))
+    if name is None:
+        return JSONResponse({'error': 'Некорректное имя файла'}, status_code=400)
+    target = FARM9_CREDS_DIR / name
+    if not target.is_file():
+        return JSONResponse({'error': f'Файл не найден: {name}'}, status_code=404)
+    try:
+        target.unlink()
+    except OSError as exc:
+        return JSONResponse({'error': f'Не удалось удалить файл: {exc}'}, status_code=500)
+    return JSONResponse({'ok': True})
 
 
 @app.get('/api/farm9/stats')

@@ -31,5 +31,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # Make capture modules (farm9_lib, play, ...) importable from web_coupons
 ENV PYTHONPATH=/app/capture
+# Uploaded credentials live on the persistent /data volume
+ENV CREDS_DIR=/data/credentials
 
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir web_coupons"]

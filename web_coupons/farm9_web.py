@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 import time
 from datetime import datetime
@@ -13,6 +14,64 @@ from starlette.concurrency import run_in_threadpool
 
 HERE = Path(__file__).parent
 CAPTURE_DIR = HERE.parent / 'capture'
+
+
+def _default_creds_dir() -> Path:
+    """Writable folder for uploaded credentials (persists with /data volume)."""
+    db_path = (os.environ.get('DB_PATH') or '').strip()
+    if db_path:
+        return Path(db_path).expanduser().parent / 'credentials'
+    return HERE.parent / 'data' / 'credentials'
+
+
+# Search order: uploaded creds first, then files baked/mounted into capture/
+CREDS_DIR = Path(os.environ.get('CREDS_DIR')).expanduser() if os.environ.get('CREDS_DIR') else _default_creds_dir()
+CREDS_DIRS = [CREDS_DIR, CAPTURE_DIR]
+
+
+def resolve_creds_file(name: str) -> Path | None:
+    """Find a credentials file by name in the known credential folders."""
+    if not name:
+        return None
+    safe = Path(name).name
+    if safe != name or '\\' in name or not name.endswith('.json'):
+        return None
+    for directory in CREDS_DIRS:
+        candidate = directory / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def list_creds() -> list[dict]:
+    """List credential files available to the bot, deduplicated by name."""
+    items: list[dict] = []
+    seen: set[str] = set()
+    for directory, source in ((CREDS_DIR, 'data'), (CAPTURE_DIR, 'capture')):
+        try:
+            paths = sorted(directory.glob('credentials*.json'))
+        except OSError:
+            continue
+        for path in paths:
+            if path.name in seen or not path.is_file():
+                continue
+            seen.add(path.name)
+            info: dict = {
+                'name': path.name,
+                'source': source,
+                'editable': source == 'data',
+                'user_id': None,
+                'valid': False,
+            }
+            try:
+                data = json.loads(path.read_text(encoding='utf-8'))
+                if isinstance(data, dict):
+                    info['user_id'] = data.get('user_id')
+                    info['valid'] = bool(data.get('user_id') and (data.get('hash') or data.get('token')))
+            except (OSError, ValueError):
+                pass
+            items.append(info)
+    return items
 
 # Add capture to path for imports
 sys.path.insert(0, str(CAPTURE_DIR))
@@ -189,7 +248,7 @@ class Farm9Controller:
             # We need to simulate command line args
             class Args:
                 def __init__(self):
-                    self.creds = str(CAPTURE_DIR / creds_file)
+                    self.creds = creds_file
                     self.minutes = minutes
                     self.target = target
                     self.status = False
@@ -223,7 +282,10 @@ class Farm9Controller:
         
         creds_path = Path(args.creds)
         if not creds_path.is_absolute():
-            creds_path = CAPTURE_DIR / creds_path
+            resolved = resolve_creds_file(creds_path.name)
+            if resolved is None:
+                raise FileNotFoundError(f'Файл кредов не найден: {args.creds}')
+            creds_path = resolved
         creds = json.loads(creds_path.read_text(encoding='utf-8'))
         
         token = await run_in_threadpool(play.get_token, creds)
