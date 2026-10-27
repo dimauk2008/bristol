@@ -945,39 +945,70 @@ async def farm9_start(request: Request):
     if version not in FARM9_VERSIONS:
         return JSONResponse({'error': f'Неизвестная стратегия: {version}'}, status_code=400)
 
-    creds_file = str(body.get('creds_file') or 'credentials.account5.json')
-    creds_path = farm9_resolve_creds(creds_file)
-    if creds_path is None:
+    raw_accounts = body.get('accounts')
+    if raw_accounts is None:
+        raw_accounts = [body.get('creds_file') or 'credentials.account5.json']
+    if not isinstance(raw_accounts, list):
+        return JSONResponse({'error': 'Поле accounts должно быть списком'}, status_code=400)
+
+    accounts: list[str] = []
+    for raw in raw_accounts:
+        name = str(raw or '').strip()
+        if name and name not in accounts:
+            accounts.append(name)
+    if not accounts:
+        return JSONResponse({'error': 'Не выбран ни один аккаунт'}, status_code=400)
+    if len(accounts) > 10:
+        return JSONResponse({'error': 'Максимум 10 аккаунтов за один запуск'}, status_code=400)
+
+    missing = [name for name in accounts if farm9_resolve_creds(name) is None]
+    if missing:
         return JSONResponse(
-            {'error': f'Файл кредов не найден: {creds_file}. '
-                      f'Загрузите JSON в панели (сохраняется в {FARM9_CREDS_DIR}) '
-                      f'или смонтируйте его в {FARM9_CAPTURE_DIR}.'},
+            {'error': 'Файлы кредов не найдены: ' + ', '.join(missing) +
+                      f'. Загрузите JSON в панели (сохраняется в {FARM9_CREDS_DIR}).'},
             status_code=400,
         )
 
-    if farm9_controller.is_running:
-        return JSONResponse({'error': 'Бот уже запущен'}, status_code=400)
-
-    await farm9_controller.start(
+    results = await farm9_controller.start_many(
+        accounts,
         minutes=minutes,
         target=target,
         attempt_type=attempt_type,
         version=version,
-        creds_file=creds_file,
         delay=delay,
         gift_min=gift_min,
     )
-    return JSONResponse({'ok': True, 'creds_file': creds_file})
+    started = [item for item in results if item.get('started')]
+    if not started:
+        return JSONResponse(
+            {'error': 'Все выбранные аккаунты уже запущены', 'results': results},
+            status_code=400,
+        )
+    return JSONResponse({'ok': True, 'results': results, 'started': len(started)})
 
 
 @app.post('/api/farm9/stop')
 async def farm9_stop(request: Request):
-    """Stop the farm9 bot."""
+    """Stop one account (creds_file/account in body) or all running accounts."""
     if not _is_admin(request):
         return JSONResponse({'error': 'unauthorized'}, status_code=401)
-    
-    await farm9_controller.stop()
-    return JSONResponse({'ok': True})
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    account = None
+    if isinstance(body, dict):
+        account = body.get('creds_file') or body.get('account')
+    account = str(account).strip() if account else None
+
+    if isinstance(body, dict) and isinstance(body.get('accounts'), list) and body['accounts']:
+        names = {str(item).strip() for item in body['accounts'] if str(item).strip()}
+        for name in names:
+            await farm9_controller.stop(name)
+        return JSONResponse({'ok': True, 'stopped': sorted(names)})
+
+    await farm9_controller.stop(account)
+    return JSONResponse({'ok': True, 'stopped': account or 'all'})
 
 
 def _safe_creds_name(raw) -> str | None:
@@ -1071,19 +1102,22 @@ async def farm9_creds_delete(request: Request):
 
 
 @app.get('/api/farm9/stats')
-async def farm9_stats(request: Request):
-    """Get current farm9 stats."""
+async def farm9_stats(request: Request, account: str | None = None):
+    """Get aggregate stats for all accounts (or one account)."""
     if not _is_admin(request):
         return JSONResponse({'error': 'unauthorized'}, status_code=401)
-    
-    return JSONResponse(farm9_controller.get_stats())
+
+    stats = farm9_controller.get_stats(account) if account else farm9_controller.get_stats()
+    if stats is None:
+        return JSONResponse({'error': f'Аккаунт не запускался: {account}'}, status_code=404)
+    return JSONResponse(stats)
 
 
 @app.get('/api/farm9/logs')
-async def farm9_logs(request: Request, since: int = 0):
-    """Get farm9 logs since index."""
+async def farm9_logs(request: Request, since: int = 0, account: str | None = None):
+    """Get farm9 logs since index, optionally filtered by account."""
     if not _is_admin(request):
         return JSONResponse({'error': 'unauthorized'}, status_code=401)
-    
-    logs = farm9_controller.get_logs(since)
+
+    logs = farm9_controller.get_logs(since, account)
     return JSONResponse({'logs': logs, 'total': farm9_controller.log_total})

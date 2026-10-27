@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import time
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -79,11 +80,32 @@ sys.path.insert(0, str(CAPTURE_DIR))
 import farm9_lib
 from farm9_lib import VERSIONS, log as farm9_log, main as farm9_main
 
+# farm9_lib.log() is a module-level global. Route its messages to the run that is
+# bound to the current threadpool call, so parallel accounts keep separate logs.
+_CURRENT_RUN: ContextVar[Any] = ContextVar('farm9_current_run', default=None)
+_FARM9_ORIGINAL_LOG = farm9_lib.log
+
+
+def _farm9_log_dispatch(msg: str, logfile: Path | None = None) -> None:
+    try:
+        _FARM9_ORIGINAL_LOG(msg, logfile)
+    except Exception:
+        pass
+    ctrl = _CURRENT_RUN.get()
+    if ctrl is not None:
+        ctrl._add_log(msg)
+
+
+farm9_lib.log = _farm9_log_dispatch
+
 
 class Farm9Controller:
-    """Controls the farm9 bot with real-time logging and stats."""
-    
-    def __init__(self):
+    """Controls one farm9 bot account with real-time logging and stats."""
+
+    def __init__(self, creds_file: str = 'credentials.account5.json', on_log=None):
+        self.creds_file = creds_file
+        self.user_id: str | None = None
+        self._on_log = on_log
         self._task: asyncio.Task | None = None
         self._stop_event = asyncio.Event()
         self._log_queue: asyncio.Queue[str] = asyncio.Queue()
@@ -109,11 +131,33 @@ class Farm9Controller:
         # Monotonic counters so log polling survives buffer trimming/clearing
         self._log_total = 0
         self._log_dropped = 0
-    
+
+    @property
+    def label(self) -> str:
+        """Short account label for logs, e.g. account5."""
+        name = self.creds_file or 'account'
+        if name.startswith('credentials.'):
+            name = name[len('credentials.'):]
+        if name.endswith('.json'):
+            name = name[:-len('.json')]
+        return name or 'account'
+
     @property
     def is_running(self) -> bool:
         return self._task is not None and not self._task.done()
-    
+
+    def _bind_run(self, fn, *args, **kwargs):
+        """Mark threadpool work as belonging to this controller (for log routing)."""
+        token = _CURRENT_RUN.set(self)
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            _CURRENT_RUN.reset(token)
+
+    async def _rt(self, fn, *args, **kwargs):
+        """Run blocking farm9_lib/play calls in a threadpool with log context."""
+        return await run_in_threadpool(self._bind_run, fn, *args, **kwargs)
+
     def _add_log(self, msg: str) -> None:
         """Add log message to buffer and queue."""
         timestamp = datetime.now().strftime('%H:%M:%S')
@@ -128,6 +172,11 @@ class Farm9Controller:
             self._log_queue.put_nowait(line)
         except asyncio.QueueFull:
             pass
+        if self._on_log is not None:
+            try:
+                self._on_log(self.label, line)
+            except Exception:
+                pass
     
     def _update_stats(self, key: str, value: Any) -> None:
         self._stats[key] = value
@@ -202,50 +251,11 @@ class Farm9Controller:
     
     async def _run_bot(self, minutes: float, target: int, attempt_type: str, 
                        version: str, creds_file: str, delay: float | None, gift_min: int | None) -> None:
-        """Run the farm9 bot in a thread pool with custom logging."""
-        
-        # We need to monkey-patch the farm9_lib.log function to capture logs
-        original_log = farm9_lib.log
+        """Run the farm9 bot in a thread pool with per-account logging."""
         logfile = CAPTURE_DIR / f'farm9_{version}.log'
-        
-        def web_log(msg: str, logfile_param: Path | None = None) -> None:
-            # Call original to write to file
-            original_log(msg, logfile_param)
-            # Also send to web
-            self._add_log(msg)
-        
-        farm9_lib.log = web_log
-        
-        # Also patch collect_new_rewards to track coupons by discount
-        original_collect = farm9_lib.collect_new_rewards
-        
-        def web_collect(token: str, known: set[str]) -> tuple[int, set[str]]:
-            coins, new_known = original_collect(token, known)
-            # Note: The actual coupon discount info would come from the reward data
-            # For now, we track when coupons are collected
-            return coins, new_known
-        
-        farm9_lib.collect_new_rewards = web_collect
-        
-        # Patch decide to track coupon stats
-        original_decide = farm9_lib.decide
-        
-        def web_decide(strategy: str, sess: dict, cfg: dict, attempt_type: str,
-                       gift_min: int, booster_price: int, balance: int) -> dict:
-            result = original_decide(strategy, sess, cfg, attempt_type, gift_min, booster_price, balance)
-            # Track promo coupons seen
-            if result.get('promo') is not None:
-                self._stats['promo_seen'] = self._stats.get('promo_seen', 0) + 1
-            if result.get('coupon'):
-                # We'll track when actually collected
-                pass
-            return result
-        
-        farm9_lib.decide = web_decide
-        
+
         try:
-            # Run the main function with our parameters
-            # We need to simulate command line args
+            # Run a modified version of main() that respects the stop event
             class Args:
                 def __init__(self):
                     self.creds = creds_file
@@ -258,18 +268,14 @@ class Farm9Controller:
                     self.booster_price = None
                     self.json_out = ''
                     self.log = str(logfile)
-            
+
             args = Args()
-            
-            # We'll run a modified version of main that checks _stop_event
+
             await self._run_main_loop(args, version)
-            
+
         except Exception as e:
             self._add_log(f"Ошибка: {e}")
         finally:
-            farm9_lib.log = original_log
-            farm9_lib.collect_new_rewards = original_collect
-            farm9_lib.decide = original_decide
             self._stats['running'] = False
     
     async def _run_main_loop(self, args, version: str) -> None:
@@ -287,11 +293,12 @@ class Farm9Controller:
                 raise FileNotFoundError(f'Файл кредов не найден: {args.creds}')
             creds_path = resolved
         creds = json.loads(creds_path.read_text(encoding='utf-8'))
+        self.user_id = creds.get('user_id') or self.user_id
         
-        token = await run_in_threadpool(play.get_token, creds)
-        cfg = await run_in_threadpool(play.get_config, token)
+        token = await self._rt(play.get_token, creds)
+        cfg = await self._rt(play.get_config, token)
         booster_price = int(args.booster_price or cfg.get('booster_price') or 100)
-        balance = await run_in_threadpool(farm9_lib.get_balance, token)
+        balance = await self._rt(farm9_lib.get_balance, token)
         start_balance = balance
         
         self._stats['balance_start'] = start_balance
@@ -299,11 +306,11 @@ class Farm9Controller:
         
         self._add_log(f"Старт {defaults['title']}, аккаунт {creds.get('user_id')}, баланс={balance}, режим={args.attempt_type}")
         
-        await run_in_threadpool(farm9_lib.stop_active_sessions, token)
+        await self._rt(farm9_lib.stop_active_sessions, token)
         
         known: set[str] = set()
         try:
-            known = {r['reward_id'] for r in (await run_in_threadpool(
+            known = {r['reward_id'] for r in (await self._rt(
                 lambda: play.api('GET', '/game/rewards?status=pending', token).json()
             )) if r.get('reward_id')}
         except Exception:
@@ -330,7 +337,7 @@ class Farm9Controller:
                 last_10min_log = time.monotonic()
             
             try:
-                att = await run_in_threadpool(lambda: play.api('GET', '/users/daily-attempt', token).json())
+                att = await self._rt(lambda: play.api('GET', '/users/daily-attempt', token).json())
                 if args.attempt_type == 'free':
                     available = att.get('free_attempt_available')
                     remaining = att.get('free_attempts_remaining', 0)
@@ -344,14 +351,14 @@ class Farm9Controller:
                     self._add_log("Платные попытки недоступны — стоп")
                     break
                 
-                sess = await run_in_threadpool(farm9_lib.start_attempt, token, args.attempt_type)
+                sess = await self._rt(farm9_lib.start_attempt, token, args.attempt_type)
             except Exception as e:
                 self._stats['errors'] += 1
                 self._add_log(f"Ошибка старта: {e}, перелогин")
                 try:
-                    token = await run_in_threadpool(play.get_token, creds)
-                    cfg = await run_in_threadpool(play.get_config, token)
-                    balance = await run_in_threadpool(farm9_lib.get_balance, token)
+                    token = await self._rt(play.get_token, creds)
+                    cfg = await self._rt(play.get_config, token)
+                    balance = await self._rt(farm9_lib.get_balance, token)
                     self._stats['balance'] = balance
                 except Exception as e2:
                     self._add_log(f"Перелогин не удался: {e2}")
@@ -374,19 +381,19 @@ class Farm9Controller:
                 self._add_log(f"Раунд {self._stats['rounds']}: цель={decision['target']}, промо={decision.get('promo')}")
             
             try:
-                stop = await run_in_threadpool(farm9_lib.execute_round, token, sid, decision)
+                stop = await self._rt(farm9_lib.execute_round, token, sid, decision)
             except Exception as e:
                 self._stats['errors'] += 1
                 self._add_log(f"Ошибка раунда: {e}, перелогин")
                 try:
-                    token = await run_in_threadpool(play.get_token, creds)
+                    token = await self._rt(play.get_token, creds)
                 except Exception:
                     pass
                 continue
             
             if stop.get('status') == 'win_finished':
                 self._stats['wins'] = self._stats.get('wins', 0) + 1
-                coins, known = await run_in_threadpool(farm9_lib.collect_new_rewards, token, known)
+                coins, known = await self._rt(farm9_lib.collect_new_rewards, token, known)
                 self._stats['coins'] += coins
                 balance += coins
                 self._stats['balance'] = balance
@@ -414,7 +421,7 @@ class Farm9Controller:
                 await asyncio.sleep(delay)
         
         # Final balance
-        balance = await run_in_threadpool(farm9_lib.get_balance, token)
+        balance = await self._rt(farm9_lib.get_balance, token)
         self._stats['balance'] = balance
         self._stats['duration_sec'] = round(time.monotonic() - started, 1)
         
@@ -433,9 +440,9 @@ class Farm9Controller:
             await asyncio.sleep(chunk)
             wait -= chunk
             try:
-                att = await run_in_threadpool(lambda: play.api('GET', '/users/daily-attempt', token).json())
+                att = await self._rt(lambda: play.api('GET', '/users/daily-attempt', token).json())
             except Exception:
-                token = await run_in_threadpool(play.get_token, creds)
+                token = await self._rt(play.get_token, creds)
                 continue
             if att.get('free_attempt_available') and (att.get('free_attempts_remaining') or 0) != 0:
                 self._add_log(f"Бесплатные попытки вернулись: {att.get('free_attempts_remaining')}")
@@ -460,6 +467,9 @@ class Farm9Controller:
         stats['running'] = self.is_running
         stats['logs_count'] = self._log_total
         stats['log_total'] = self._log_total
+        stats['creds_file'] = self.creds_file
+        stats['account'] = self.label
+        stats['user_id'] = self.user_id
         stats.setdefault('wins', 0)
         # Elapsed time of the current run (frozen after the run stops)
         elapsed = 0
@@ -486,5 +496,149 @@ class Farm9Controller:
         return stats
 
 
-# Global controller instance
-farm9_controller = Farm9Controller()
+class Farm9Manager:
+    """Runs one Farm9Controller per account, all in parallel."""
+
+    def __init__(self):
+        self._runs: dict[str, Farm9Controller] = {}
+        self._merged: list[tuple[str, str]] = []  # (account label, log line)
+        self._merged_total = 0
+        self._merged_dropped = 0
+        self._max_merged_lines = 3000
+
+    # --- logs ---
+    def _append_log(self, label: str, line: str) -> None:
+        self._merged.append((label, line))
+        self._merged_total += 1
+        if len(self._merged) > self._max_merged_lines:
+            drop = len(self._merged) - self._max_merged_lines
+            self._merged = self._merged[drop:]
+            self._merged_dropped += drop
+
+    @property
+    def log_total(self) -> int:
+        return self._merged_total
+
+    def get_logs(self, since: int = 0, account: str | None = None) -> list[str]:
+        start = max(0, since - self._merged_dropped)
+        lines: list[str] = []
+        for label, line in self._merged[start:]:
+            if account and label != account:
+                continue
+            lines.append(f"[{label}] {line}")
+        return lines
+
+    # --- runs ---
+    @property
+    def is_running(self) -> bool:
+        return any(ctrl.is_running for ctrl in self._runs.values())
+
+    @property
+    def running_count(self) -> int:
+        return sum(1 for ctrl in self._runs.values() if ctrl.is_running)
+
+    def _controller(self, creds_file: str) -> Farm9Controller:
+        ctrl = self._runs.get(creds_file)
+        if ctrl is None:
+            ctrl = Farm9Controller(creds_file, on_log=self._append_log)
+            self._runs[creds_file] = ctrl
+        return ctrl
+
+    def _find(self, key: str | None) -> Farm9Controller | None:
+        """Find a controller by creds file name, account label or user_id."""
+        if not key:
+            return None
+        ctrl = self._runs.get(key)
+        if ctrl is not None:
+            return ctrl
+        for candidate in self._runs.values():
+            if candidate.label == key or candidate.user_id == key:
+                return candidate
+        return None
+
+    async def start(
+        self,
+        minutes: float = 0,
+        target: int = 0,
+        attempt_type: str = 'paid',
+        version: str = 'promo',
+        creds_file: str = 'credentials.account5.json',
+        delay: float | None = None,
+        gift_min: int | None = None,
+    ) -> list[dict]:
+        """Start a single account (kept for backwards compatibility)."""
+        return await self.start_many(
+            [creds_file], minutes=minutes, target=target, attempt_type=attempt_type,
+            version=version, delay=delay, gift_min=gift_min,
+        )
+
+    async def start_many(
+        self,
+        creds_files: list[str],
+        minutes: float = 0,
+        target: int = 0,
+        attempt_type: str = 'paid',
+        version: str = 'promo',
+        delay: float | None = None,
+        gift_min: int | None = None,
+    ) -> list[dict]:
+        """Start several accounts at once; already running ones are skipped."""
+        results: list[dict] = []
+        for creds_file in creds_files:
+            ctrl = self._controller(creds_file)
+            if ctrl.is_running:
+                results.append({
+                    'creds_file': creds_file, 'account': ctrl.label,
+                    'started': False, 'reason': 'already_running',
+                })
+                continue
+            try:
+                path = resolve_creds_file(creds_file)
+                if path is not None:
+                    ctrl.user_id = json.loads(path.read_text(encoding='utf-8')).get('user_id')
+            except (OSError, ValueError):
+                pass
+            await ctrl.start(
+                minutes=minutes, target=target, attempt_type=attempt_type,
+                version=version, creds_file=creds_file, delay=delay, gift_min=gift_min,
+            )
+            results.append({
+                'creds_file': creds_file, 'account': ctrl.label,
+                'user_id': ctrl.user_id, 'started': True,
+            })
+        return results
+
+    async def stop(self, creds_file: str | None = None) -> None:
+        """Stop one account or every running account."""
+        if creds_file:
+            ctrl = self._find(creds_file)
+            targets = [ctrl] if ctrl is not None else []
+        else:
+            targets = list(self._runs.values())
+        if targets:
+            await asyncio.gather(*(ctrl.stop() for ctrl in targets), return_exceptions=True)
+
+    def get_stats(self, creds_file: str | None = None) -> dict | None:
+        """Stats for one account or an aggregate for all accounts."""
+        if creds_file:
+            ctrl = self._find(creds_file)
+            return ctrl.get_stats() if ctrl is not None else None
+
+        accounts = [self._runs[name].get_stats() for name in sorted(self._runs)]
+        keys = ('coins', 'coupons', 'wins', 'rounds', 'played', 'skipped', 'errors')
+        totals = {key: sum(int(a.get(key) or 0) for a in accounts) for key in keys}
+        totals['balance'] = sum(int(a.get('balance') or 0) for a in accounts)
+        return {
+            'running': any(a.get('running') for a in accounts),
+            'running_count': sum(1 for a in accounts if a.get('running')),
+            'count': len(accounts),
+            'accounts': accounts,
+            'totals': totals,
+            'log_total': self._merged_total,
+            'logs_count': self._merged_total,
+            'elapsed_sec': max((int(a.get('elapsed_sec') or 0) for a in accounts), default=0),
+        }
+
+
+# Global manager instance (single account per controller, many in parallel)
+farm9_controller = Farm9Manager()

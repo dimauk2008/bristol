@@ -1,25 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Farm9 — управление фармером{% endblock %}
+{% block title %}Farm9 — мультиаккаунт{% endblock %}
 
 {% block head %}
 <style>
   .f9-top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
   .f9-top h1{margin-bottom:4px}
-  .f9-status{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;font-weight:700;font-size:13px;background:#f2f3f5;color:var(--muted);border:1px solid var(--line)}
+  .f9-status{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;font-weight:700;font-size:13px;background:#f2f3f5;color:var(--muted);border:1px solid var(--line);white-space:nowrap}
   .f9-status.on{background:var(--green-soft);color:#067647;border-color:#b7ebd1}
-  .f9-status.off{background:#f2f3f5;color:var(--muted)}
   .f9-status .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
   .f9-status.on .dot{animation:pulse 1.6s infinite}
 
   .f9-hero{background:linear-gradient(135deg,#1c1e26,#2c2f3a);color:#fff;border:0;position:relative;overflow:hidden}
   .f9-hero::after{content:'';position:absolute;right:-90px;top:-90px;width:320px;height:320px;background:radial-gradient(circle,rgba(226,0,26,.45),transparent 65%);pointer-events:none}
-  .f9-hero .f9-meta{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;position:relative;z-index:1}
-  .f9-hero .f9-meta .lbl{color:#c7cad4;font-size:12.5px}
-  .f9-hero .f9-meta .val{font-weight:700}
-  .f9-hero .progress{position:relative;z-index:1;background:rgba(255,255,255,.14);margin:14px 0 16px}
-  .f9-hero .progress > i{background:linear-gradient(90deg,#ff5c6c,var(--red));box-shadow:0 0 16px rgba(255,92,108,.7)}
-  .f9-hero .f9-grid{position:relative;z-index:1}
+  .f9-hero .f9-grid,.f9-hero .f9-meta{position:relative;z-index:1}
   .f9-hero .f9-stat{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
   .f9-hero .f9-stat .k{color:#c7cad4}
   .f9-hero .f9-stat .v{color:#fff}
@@ -34,9 +28,9 @@
   .f9-stat .v.amber{color:#b54708}
   .f9-stat .v.red{color:#b42318}
   .f9-stat .v.blue{color:#175cd3}
-
-  .progress{height:8px;background:#eceef2;border-radius:999px;overflow:hidden}
-  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red-2),var(--red));transition:width .45s ease}
+  .f9-hero .f9-stat .v.green{color:#7ee2a8}
+  .f9-hero .f9-stat .v.amber{color:#ffd166}
+  .f9-hero .f9-stat .v.blue{color:#7cc7ff}
 
   .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
   .preset{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;font:inherit;color:var(--ink-2);transition:border var(--t),box-shadow var(--t),background var(--t);flex:1;min-width:180px}
@@ -62,6 +56,37 @@
   .f9-actions .btn{min-height:44px}
   .f9-actions .btn[disabled]{opacity:.45;pointer-events:none}
 
+  .acc-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .acc-toolbar .left,.acc-toolbar .right{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .acc-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;max-height:280px;overflow:auto;padding:2px}
+  .acc-opt{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;transition:border var(--t),background var(--t);min-width:0}
+  .acc-opt:hover{border-color:#d9dce3}
+  .acc-opt.checked{border-color:var(--red);background:var(--red-soft)}
+  .acc-opt.disabled{opacity:.6;cursor:not-allowed}
+  .acc-opt input{width:16px;height:16px;margin:0;accent-color:var(--red);flex:none;cursor:pointer}
+  .acc-opt .main{flex:1;min-width:0}
+  .acc-opt .nm{font-weight:700;font-size:13px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acc-opt .sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acc-opt .flag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--green-soft);color:#067647;flex:none}
+  .acc-opt .flag.off{background:#f2f3f5;color:var(--muted)}
+
+  .f9-accgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}
+  .acc-card{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff;box-shadow:var(--shadow-sm);min-width:0}
+  .acc-card.running{border-color:#b7ebd1;box-shadow:0 0 0 3px rgba(18,183,106,.08)}
+  .acc-card .head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .acc-card .nm{font-weight:800;font-size:15px;letter-spacing:-.01em}
+  .acc-card .sub{font-size:11.5px;color:var(--muted);word-break:break-word}
+  .acc-card .mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+  .acc-card .mini .v{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+  .acc-card .mini .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .acc-card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px dashed var(--line);padding-top:10px}
+  .acc-card .elapsed{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .acc-card .progress{height:6px;margin-top:8px}
+  .acc-card .progress i{transition:width .4s ease}
+
+  .progress{height:8px;background:#eceef2;border-radius:999px;overflow:hidden}
+  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red-2),var(--red))}
+
   .f9-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
   .f9-toolbar .left,.f9-toolbar .right{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   select.f9-mini,input.f9-mini{width:auto;padding:7px 11px;font-size:13px;border-radius:10px;min-height:36px}
@@ -70,7 +95,6 @@
   .f9-check input{width:15px;height:15px;margin:0;accent-color:var(--red);cursor:pointer}
   .f9-log{background:#14161d;border-radius:14px;padding:12px 14px;max-height:min(58vh,560px);overflow:auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
   .f9-log .line{display:block;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.62;color:#c9cfdb;padding:1px 0}
-  .f9-log .line .t{color:#6b7385}
   .f9-log .line.err{color:#ff8f8f}
   .f9-log .line.win{color:#7ee2a8}
   .f9-log .line.coupon{color:#ffd166}
@@ -89,9 +113,7 @@
   .f9-hint{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#fff8eb;color:#93370d;font-size:13px;margin-top:12px;border:1px solid #fde3b8}
   .f9-hint.hidden{display:none}
 
-  @media (max-width:1023px){
-    .f9-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  }
+  @media (max-width:1023px){ .f9-grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
   @media (max-width:640px){
     .f9-hero .f9-grid,.f9-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .f9-form{grid-template-columns:1fr}
@@ -99,36 +121,30 @@
     .f9-actions .btn{flex:1;min-width:130px}
     .f9-log{max-height:52vh}
     .f9-top h1{font-size:22px}
+    .f9-accgrid{grid-template-columns:1fr}
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="wrap-inner">
+<div>
   <div class="f9-top">
     <div>
-      <h1>Farm9 · управление фармером</h1>
-      <p class="muted small">Collect-the-Bag: промо-клики, купоны и монеты. Параметры сохраняются в браузере.</p>
+      <h1>Farm9 · мультиаккаунт</h1>
+      <p class="muted small">Один или несколько аккаунтов одновременно. Параметры и выбор сохраняются в браузере.</p>
     </div>
     <div class="f9-status off" id="statusBadge"><span class="dot"></span><span id="statusText">Остановлен</span></div>
   </div>
 
-  <!-- Live summary -->
+  <!-- Totals -->
   <div class="card f9-hero">
-    <div class="f9-meta">
-      <div><span class="lbl">Запуск:</span> <span class="val" id="runStarted">—</span></div>
-      <div><span class="lbl">Прошло:</span> <span class="val" id="runElapsed">0 с</span></div>
-      <div id="targetMetaWrap"><span class="lbl">Цель:</span> <span class="val" id="targetMeta">—</span></div>
-      <div><span class="lbl">Аккаунт:</span> <span class="val" id="runAccount">—</span></div>
-    </div>
-    <div class="progress" id="runProgressWrap" style="display:none"><i id="runProgress"></i></div>
     <div class="f9-grid">
-      <div class="f9-stat"><div class="v" id="statBalance">0</div><div class="k">Баланс</div></div>
+      <div class="f9-stat"><div class="v" id="statBalance">0</div><div class="k">Суммарный баланс</div></div>
       <div class="f9-stat"><div class="v green" id="statCoins">0</div><div class="k">Монет за сессию</div></div>
       <div class="f9-stat"><div class="v amber" id="statCoupons">0</div><div class="k">Купонов</div></div>
       <div class="f9-stat"><div class="v blue" id="statWins">0</div><div class="k">Побед</div></div>
       <div class="f9-stat"><div class="v" id="statRounds">0</div><div class="k">Раундов</div></div>
-      <div class="f9-stat"><div class="v" id="statPlayed">0</div><div class="k">Сыграно</div></div>
+      <div class="f9-stat"><div class="v" id="statRunningAccounts">0 / 0</div><div class="k">Работает аккаунтов</div></div>
     </div>
   </div>
 
@@ -171,22 +187,63 @@
         </div>
       </div>
       <div class="field">
-        <label for="target">Целевой баланс</label>
+        <label for="target">Целевой баланс (на аккаунт)</label>
         <input type="number" id="target" min="0" step="100" value="0" placeholder="0 — без цели">
       </div>
       <div class="field">
-        <label for="creds_file">Аккаунт (файл кредов)</label>
-        <div style="display:flex;gap:8px">
-          <select id="creds_file" style="flex:1"></select>
-          <button type="button" class="btn ghost sm" id="btnUploadCreds" title="Загрузить JSON кредов">＋</button>
-          <button type="button" class="btn ghost sm" id="btnReloadCreds" title="Обновить список">⟳</button>
-          <input type="file" id="credsFileInput" accept=".json,application/json" hidden>
-        </div>
-        <div class="f9-hint hidden" id="credsHint"></div>
+        <label for="delay">Задержка между раундами, сек</label>
+        <input type="number" id="delay" min="0" step="0.1" value="" placeholder="auto — из стратегии">
       </div>
     </div>
 
-    <details class="adv" id="credsBox">
+    <details class="adv" id="advancedBox">
+      <summary>Дополнительно</summary>
+      <div class="row">
+        <div class="field">
+          <label for="gift_min">Gift min</label>
+          <input type="number" id="gift_min" min="0" step="1" value="" placeholder="auto — из стратегии">
+        </div>
+      </div>
+    </details>
+
+    <div class="acc-toolbar mt2">
+      <div class="left">
+        <b style="font-size:14px">Аккаунты</b>
+        <span class="f9-count" id="selectedCount">0</span>
+      </div>
+      <div class="right">
+        <button type="button" class="btn ghost sm" id="btnSelectAll">Выбрать все</button>
+        <button type="button" class="btn ghost sm" id="btnSelectIdle">Только свободные</button>
+        <button type="button" class="btn ghost sm" id="btnSelectNone">Снять</button>
+        <button type="button" class="btn ghost sm" id="btnUploadCreds" title="Загрузить JSON кредов">＋ JSON</button>
+        <button type="button" class="btn ghost sm" id="btnReloadCreds" title="Обновить список">⟳</button>
+        <input type="file" id="credsFileInput" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <div class="acc-list" id="accountPicker"></div>
+    <div class="f9-hint hidden" id="credsHint"></div>
+
+    <div class="f9-actions">
+      <button type="button" class="btn success" id="btnStart">▶ Запустить</button>
+      <button type="button" class="btn ghost" id="btnRestart">↻ Перезапустить</button>
+      <button type="button" class="btn danger" id="btnStopAll" disabled>■ Остановить все</button>
+    </div>
+  </div>
+
+  <!-- Per-account cards -->
+  <div class="card">
+    <div class="sectionhead">
+      <h2>Аккаунты</h2>
+      <span class="muted small" id="accountsMeta">—</span>
+    </div>
+    <div class="f9-accgrid" id="accountCards">
+      <div class="muted small">Запустите аккаунт, чтобы увидеть статистику.</div>
+    </div>
+  </div>
+
+  <!-- Credentials management -->
+  <div class="card">
+    <details class="adv" id="credsBox" style="border-top:0;padding-top:0">
       <summary>Файлы кредов: загрузка и удаление</summary>
       <div class="mt2">
         <div class="f9-toolbar">
@@ -202,46 +259,6 @@
         <div id="credsList" class="list mt2"></div>
       </div>
     </details>
-
-    <details class="adv" id="advBox">
-      <summary>Дополнительно: задержка и минимальный подарок</summary>
-      <div class="row">
-        <div class="field">
-          <label for="delay">Задержка между раундами, сек</label>
-          <input type="number" id="delay" min="0" step="0.1" value="" placeholder="auto — из стратегии">
-        </div>
-        <div class="field">
-          <label for="gift_min">Gift min</label>
-          <input type="number" id="gift_min" min="0" step="1" value="" placeholder="auto — из стратегии">
-        </div>
-      </div>
-    </details>
-
-    <div class="f9-actions">
-      <button type="button" class="btn success" id="btnStart">▶ Запустить</button>
-      <button type="button" class="btn ghost" id="btnRestart">↻ Перезапустить</button>
-      <button type="button" class="btn danger" id="btnStop" disabled>■ Остановить</button>
-    </div>
-  </div>
-
-  <!-- Details -->
-  <div class="card">
-    <div class="sectionhead">
-      <h2>Детали и купоны</h2>
-      <span class="muted small" id="detailMeta">—</span>
-    </div>
-    <div class="f9-grid">
-      <div class="f9-stat"><div class="v" id="statSkipped">0</div><div class="k">Пропущено</div></div>
-      <div class="f9-stat"><div class="v red" id="statErrors">0</div><div class="k">Ошибок</div></div>
-      <div class="f9-stat"><div class="v" id="statPromoSeen">0</div><div class="k">Промо видено</div></div>
-      <div class="f9-stat"><div class="v" id="statPromoReach">0</div><div class="k">Промо достижимо</div></div>
-      <div class="f9-stat"><div class="v" id="statBalanceStart">0</div><div class="k">Баланс на старте</div></div>
-      <div class="f9-stat"><div class="v" id="statDuration">—</div><div class="k">Длительность</div></div>
-    </div>
-    <div id="couponSection" style="display:none">
-      <div class="muted small mt2"><b>Купоны за сессию:</b> <span id="couponSummary">нет купонов</span></div>
-      <div class="bars" id="couponBars"></div>
-    </div>
   </div>
 
   <!-- Log -->
@@ -253,6 +270,9 @@
         <span class="muted small" id="logStatus">—</span>
       </div>
       <div class="right">
+        <select id="logAccount" class="f9-mini" title="Аккаунт">
+          <option value="">Все аккаунты</option>
+        </select>
         <select id="logFilter" class="f9-mini" title="Фильтр">
           <option value="all">Все строки</option>
           <option value="important">Важное</option>
@@ -278,19 +298,23 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
-  const STORAGE_KEY = 'farm9.settings.v1';
-  const MAX_CLIENT_LOGS = 1200;
+  const STORAGE_KEY = 'farm9.settings.v2';
+  const MAX_CLIENT_LOGS = 2000;
 
   const state = {
     stats: null,
+    accounts: {},
+    creds: [],
+    selected: new Set(),
+    pickerSignature: '',
     logIndex: 0,
     serverTotal: 0,
     logs: [],
-    filter: 'all',
+    level: 'all',
+    logAccount: '',
     logsPaused: false,
     busy: false,
     unauthorized: false,
-    credsEmpty: false,
     lastFetchOk: 0,
   };
 
@@ -323,6 +347,17 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function accountLabel(name) {
+    let label = String(name || 'account');
+    if (label.indexOf('credentials.') === 0) label = label.slice('credentials.'.length);
+    if (label.endsWith('.json')) label = label.slice(0, -5);
+    return label || 'account';
+  }
+
+  function shortId(userId) {
+    return userId ? String(userId).slice(0, 8) : 'нет user_id';
   }
 
   function classify(line) {
@@ -360,21 +395,26 @@
     return data || {};
   }
 
-  /* ---------- settings persistence ---------- */
+  /* ---------- settings ---------- */
   function currentForm() {
+    const active = document.querySelector('.preset.active');
     return {
-      version: document.querySelector('.preset.active') ? document.querySelector('.preset.active').dataset.version : 'promo',
+      version: active ? active.dataset.version : 'promo',
       attempt_type: $('attempt_type').value,
       minutes: $('minutes').value,
       target: $('target').value,
-      creds_file: $('creds_file').value,
       delay: $('delay').value,
       gift_min: $('gift_min').value,
+      accounts: Array.from(state.selected),
     };
   }
 
   function saveSettings() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentForm())); } catch (e) {}
+  }
+
+  function loadSettings() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { return null; }
   }
 
   function applySettings(data) {
@@ -388,12 +428,8 @@
     if (data.target !== undefined) $('target').value = data.target;
     if (data.delay !== undefined) $('delay').value = data.delay;
     if (data.gift_min !== undefined) $('gift_min').value = data.gift_min;
-    if (data.creds_file) $('creds_file').dataset.saved = data.creds_file;
+    if (Array.isArray(data.accounts)) state.selected = new Set(data.accounts);
     syncMinutesChips();
-  }
-
-  function loadSettings() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { return null; }
   }
 
   /* ---------- presets & chips ---------- */
@@ -404,7 +440,7 @@
   }
 
   document.querySelectorAll('.preset').forEach((btn) => {
-    btn.addEventListener('click', () => { if (!state.busy) selectPreset(btn); });
+    btn.addEventListener('click', () => selectPreset(btn));
   });
 
   function syncMinutesChips() {
@@ -425,7 +461,6 @@
   /* ---------- creds ---------- */
   function renderCredsList(data) {
     const items = data.creds || [];
-    state.creds = items;
     setText('credsDirLabel', data.creds_dir || '—');
     const box = $('credsList');
     if (!items.length) {
@@ -451,44 +486,88 @@
   }
 
   async function loadCreds(preferred) {
-    const select = $('creds_file');
     const hint = $('credsHint');
-    const saved = preferred || select.dataset.saved || select.value;
     try {
       const data = await api('/api/farm9/creds');
       const items = data.creds || [];
-      select.innerHTML = '';
+      state.creds = items;
       renderCredsList(data);
-      if (!items.length) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Нет файлов кредов';
-        select.appendChild(opt);
-        select.disabled = true;
-        state.credsEmpty = true;
-        hint.classList.remove('hidden');
-        hint.innerHTML = 'Нет файлов кредов. Нажмите <b>＋</b> и загрузите JSON — он сохранится в ' +
-          '<span class="mono">' + escapeHtml(data.creds_dir || 'data/credentials') + '</span>.';
-        return;
+
+      const names = items.map((i) => i.name);
+      const valid = new Set(items.filter((i) => i.valid).map((i) => i.name));
+      state.selected = new Set(Array.from(state.selected).filter((n) => valid.has(n)));
+
+      if (preferred && names.indexOf(preferred) !== -1) state.selected.add(preferred);
+
+      if (!state.selected.size) {
+        if (preferred && names.indexOf(preferred) !== -1) state.selected.add(preferred);
+        else if (data.default && valid.has(data.default)) state.selected.add(data.default);
       }
-      select.disabled = false;
-      state.credsEmpty = false;
-      hint.classList.add('hidden');
-      items.forEach((item) => {
-        const opt = document.createElement('option');
-        opt.value = item.name;
-        const short = item.user_id ? String(item.user_id).slice(0, 8) : 'нет user_id';
-        opt.textContent = item.name + ' · ' + short + (item.valid ? '' : ' ⚠');
-        select.appendChild(opt);
-      });
-      const wanted = saved || data.default;
-      if (wanted && items.some((i) => i.name === wanted)) select.value = wanted;
-      select.dataset.saved = select.value;
+
+      if (!items.length) {
+        hint.classList.remove('hidden');
+        hint.innerHTML = 'Нет файлов кредов. Нажмите <b>＋ JSON</b> и загрузите файл — он сохранится в ' +
+          '<span class="mono">' + escapeHtml(data.creds_dir || 'data/credentials') + '</span>.';
+      } else {
+        hint.classList.add('hidden');
+      }
+      renderPicker();
+      updateLogAccountOptions();
+      updateStartButton();
       saveSettings();
-      updateUI(state.stats || {});
     } catch (e) {
-      if (e.message !== 'unauthorized') toastError('Не удалось загрузить список кредов: ' + e.message);
+      if (e.message !== 'unauthorized') toastError('Не удалось загрузить креды: ' + e.message);
     }
+  }
+
+  function runningSet() {
+    const set = {};
+    Object.keys(state.accounts).forEach((name) => {
+      if (state.accounts[name] && state.accounts[name].running) set[name] = true;
+    });
+    return set;
+  }
+
+  function renderPicker(force) {
+    const box = $('accountPicker');
+    const running = runningSet();
+    const signature = state.creds.map((i) => i.name + ':' + (i.valid ? 1 : 0)).join('|') +
+      '#' + Object.keys(running).sort().join(',') + '#' + Array.from(state.selected).sort().join(',');
+    if (!force && signature === state.pickerSignature) return;
+    state.pickerSignature = signature;
+
+    if (!state.creds.length) {
+      box.innerHTML = '<div class="muted small">Нет аккаунтов. Загрузите JSON кредов.</div>';
+      setText('selectedCount', '0');
+      return;
+    }
+
+    box.innerHTML = state.creds.map((item) => {
+      const checked = state.selected.has(item.name);
+      const isRunning = !!running[item.name];
+      const classes = ['acc-opt'];
+      if (checked) classes.push('checked');
+      if (!item.valid) classes.push('disabled');
+      return '<label class="' + classes.join(' ') + '" data-name="' + escapeHtml(item.name) + '">' +
+        '<input type="checkbox" class="acc-cb" value="' + escapeHtml(item.name) + '"' +
+        (checked ? ' checked' : '') + (item.valid ? '' : ' disabled') + '>' +
+        '<span class="main"><span class="nm">' + escapeHtml(accountLabel(item.name)) + '</span>' +
+        '<span class="sub">' + escapeHtml(shortId(item.user_id)) + ' · ' + escapeHtml(item.source === 'data' ? 'загружен' : 'capture') + '</span></span>' +
+        (isRunning ? '<span class="flag">работает</span>' : '<span class="flag off">стоп</span>') +
+        '</label>';
+    }).join('');
+
+    box.querySelectorAll('.acc-cb').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) state.selected.add(cb.value);
+        else state.selected.delete(cb.value);
+        cb.closest('.acc-opt').classList.toggle('checked', cb.checked);
+        setText('selectedCount', String(state.selected.size));
+        updateStartButton();
+        saveSettings();
+      });
+    });
+    setText('selectedCount', String(state.selected.size));
   }
 
   async function uploadCredsFile(file) {
@@ -509,6 +588,7 @@
         body: JSON.stringify({ name: file.name, content: text }),
       });
       if (window.toast) window.toast('Аккаунт загружен');
+      state.selected.add(file.name);
       await loadCreds(file.name);
     } catch (e) {
       if (e.message !== 'unauthorized') toastError('Не удалось загрузить: ' + e.message);
@@ -524,7 +604,7 @@
         body: JSON.stringify({ name: name }),
       });
       if (window.toast) window.toast('Файл удалён');
-      if ($('creds_file').value === name) $('creds_file').dataset.saved = '';
+      state.selected.delete(name);
       await loadCreds();
     } catch (e) {
       if (e.message !== 'unauthorized') toastError('Не удалось удалить: ' + e.message);
@@ -541,111 +621,140 @@
     await uploadCredsFile(file);
   });
 
-  /* ---------- stats rendering ---------- */
+  $('btnSelectAll').addEventListener('click', () => {
+    state.selected = new Set(state.creds.filter((i) => i.valid).map((i) => i.name));
+    renderPicker(true);
+    updateStartButton();
+    saveSettings();
+  });
+  $('btnSelectIdle').addEventListener('click', () => {
+    const running = runningSet();
+    state.selected = new Set(state.creds.filter((i) => i.valid && !running[i.name]).map((i) => i.name));
+    renderPicker(true);
+    updateStartButton();
+    saveSettings();
+  });
+  $('btnSelectNone').addEventListener('click', () => {
+    state.selected.clear();
+    renderPicker(true);
+    updateStartButton();
+    saveSettings();
+  });
+
+  /* ---------- stats ---------- */
   function setText(id, value) {
     const el = $(id);
     if (el) el.textContent = value;
   }
 
+  function selectedIdleCount() {
+    const running = runningSet();
+    return Array.from(state.selected).filter((n) => !running[n]).length;
+  }
+
+  function updateStartButton() {
+    const idle = selectedIdleCount();
+    $('btnStart').textContent = idle > 1 ? '▶ Запустить (' + idle + ')' : '▶ Запустить';
+    $('btnStart').disabled = state.busy || idle === 0;
+    setText('selectedCount', String(state.selected.size));
+  }
+
   function updateUI(stats) {
-    state.stats = stats;
-    const running = !!stats.running;
+    state.stats = stats || {};
+    const accounts = Array.isArray(state.stats.accounts) ? state.stats.accounts : [];
+    state.accounts = {};
+    accounts.forEach((a) => { if (a && a.creds_file) state.accounts[a.creds_file] = a; });
+
+    const totals = state.stats.totals || {};
+    const runningCount = Number(state.stats.running_count || 0);
 
     const badge = $('statusBadge');
-    badge.classList.toggle('on', running);
-    badge.classList.toggle('off', !running);
-    setText('statusText', running ? 'Работает' : 'Остановлен');
+    badge.classList.toggle('on', runningCount > 0);
+    badge.classList.toggle('off', runningCount === 0);
+    setText('statusText', runningCount > 0 ? ('Работает: ' + runningCount) : 'Остановлен');
 
-    $('btnStart').disabled = running || state.busy;
-    $('btnStop').disabled = !running || state.busy;
-    $('btnRestart').disabled = state.busy;
-    document.querySelectorAll('.preset, #minutesChips .chip, #attempt_type, #minutes, #target, #creds_file, #delay, #gift_min')
-      .forEach((el) => { el.disabled = running || (el === $('creds_file') && state.credsEmpty); });
+    setText('statBalance', fmtNum(totals.balance));
+    setText('statCoins', fmtNum(totals.coins));
+    setText('statCoupons', fmtNum(totals.coupons));
+    setText('statWins', fmtNum(totals.wins));
+    setText('statRounds', fmtNum(totals.rounds));
+    setText('statRunningAccounts', runningCount + ' / ' + state.creds.length);
 
-    setText('statBalance', fmtNum(stats.balance));
-    setText('statCoins', fmtNum(stats.coins));
-    setText('statCoupons', fmtNum(stats.coupons));
-    setText('statWins', fmtNum(stats.wins));
-    setText('statRounds', fmtNum(stats.rounds));
-    setText('statPlayed', fmtNum(stats.played));
-    setText('statSkipped', fmtNum(stats.skipped));
-    setText('statErrors', fmtNum(stats.errors));
-    setText('statPromoSeen', fmtNum(stats.promo_seen));
-    setText('statPromoReach', fmtNum(stats.promo_reachable));
-    setText('statBalanceStart', fmtNum(stats.balance_start));
+    $('btnStopAll').disabled = state.busy || runningCount === 0;
 
-    const elapsed = Number(stats.elapsed_sec || 0);
-    const durationMin = Number(stats.duration_min || 0);
-    const target = Number(stats.target_balance || 0);
+    renderAccountCards(accounts);
+    renderPicker();
+    updateLogAccountOptions();
+    updateStartButton();
 
-    let durationLabel = fmtDuration(stats.duration_sec || elapsed);
-    if (durationMin > 0 && running) durationLabel = fmtDuration(elapsed) + ' / ' + fmtDuration(durationMin * 60);
-    setText('statDuration', durationLabel);
+    setText('accountsMeta', accounts.length ? 'сессий: ' + accounts.length : 'пока нет запусков');
+  }
 
-    setText('runStarted', stats.started_at ? fmtTime(stats.started_at) : '—');
-    setText('runElapsed', stats.started_at ? fmtDuration(elapsed) : '0 с');
-    const credsSelect = $('creds_file');
-    const credsOpt = credsSelect.selectedOptions && credsSelect.selectedOptions[0];
-    setText('runAccount', credsOpt ? credsOpt.textContent.replace(' ⚠', '') : '—');
-
-    const targetMetaWrap = $('targetMetaWrap');
-    if (target > 0) {
-      targetMetaWrap.style.display = '';
-      setText('targetMeta', fmtNum(stats.balance) + ' / ' + fmtNum(target));
-    } else {
-      targetMetaWrap.style.display = 'none';
+  function renderAccountCards(accounts) {
+    const box = $('accountCards');
+    if (!accounts.length) {
+      box.innerHTML = '<div class="muted small">Запустите аккаунт, чтобы увидеть статистику.</div>';
+      return;
     }
+    box.innerHTML = accounts.map((a) => {
+      const running = !!a.running;
+      const elapsed = Number(a.elapsed_sec || 0);
+      const durationMin = Number(a.duration_min || 0);
+      let elapsedText = fmtDuration(running ? elapsed : (a.duration_sec || elapsed));
+      let pct = -1;
+      if (running && durationMin > 0) {
+        pct = Math.min(100, (elapsed / (durationMin * 60)) * 100);
+        elapsedText = fmtDuration(elapsed) + ' / ' + fmtDuration(durationMin * 60);
+      }
+      const target = Number(a.target_balance || 0);
+      return '<div class="acc-card' + (running ? ' running' : '') + '">' +
+        '<div class="head"><div style="min-width:0">' +
+        '<div class="nm">' + escapeHtml(a.account || accountLabel(a.creds_file)) + '</div>' +
+        '<div class="sub">' + escapeHtml(shortId(a.user_id)) + ' · ' + escapeHtml(a.creds_file || '') + '</div>' +
+        '</div><span class="badge ' + (running ? 'ok' : 'off') + '">' + (running ? 'работает' : 'стоп') + '</span></div>' +
+        '<div class="mini">' +
+        '<div><div class="v">' + fmtNum(a.balance) + '</div><div class="k">Баланс</div></div>' +
+        '<div><div class="v">' + fmtNum(a.coins) + '</div><div class="k">Монеты</div></div>' +
+        '<div><div class="v">' + fmtNum(a.coupons) + '</div><div class="k">Купоны</div></div>' +
+        '<div><div class="v">' + fmtNum(a.wins) + '</div><div class="k">Победы</div></div>' +
+        '<div><div class="v">' + fmtNum(a.rounds) + '</div><div class="k">Раунды</div></div>' +
+        '<div><div class="v">' + fmtNum(a.skipped) + '</div><div class="k">Пропуски</div></div>' +
+        '</div>' +
+        (pct >= 0 ? '<div class="progress"><i style="width:' + pct.toFixed(1) + '%"></i></div>' : '') +
+        '<div class="foot"><span class="elapsed">⏱ ' + escapeHtml(elapsedText) +
+        (target ? ' · цель ' + fmtNum(a.balance) + '/' + fmtNum(target) : '') +
+        (a.formatted_total ? '<br>🎁 ' + escapeHtml(a.formatted_total) : '') + '</span>' +
+        (running ? '<button type="button" class="btn danger sm" data-stop="' + escapeHtml(a.creds_file) + '">■ Стоп</button>' : '') +
+        '</div></div>';
+    }).join('');
 
-    // Progress: by time if a duration is set, otherwise by balance target
-    const wrap = $('runProgressWrap');
-    const bar = $('runProgress');
-    let pct = -1;
-    if (running && durationMin > 0) pct = Math.min(100, (elapsed / (durationMin * 60)) * 100);
-    else if (target > 0 && stats.balance_start > 0) {
-      pct = Math.min(100, Math.max(0, ((stats.balance - stats.balance_start) / (target - stats.balance_start)) * 100));
-    }
-    if (pct >= 0) {
-      wrap.style.display = '';
-      bar.style.width = pct.toFixed(1) + '%';
-    } else {
-      wrap.style.display = 'none';
-    }
-
-    // Coupon breakdown
-    const coupons = stats.coupon_stats || {};
-    const entries = Object.keys(coupons).map((k) => [Number(k), Number(coupons[k])])
-      .filter((e) => e[1] > 0).sort((a, b) => b[0] - a[0]);
-    if (entries.length) {
-      $('couponSection').style.display = '';
-      setText('couponSummary', stats.formatted_total || '—');
-      const max = Math.max.apply(null, entries.map((e) => e[1]));
-      $('couponBars').innerHTML = entries.map((e) => {
-        const w = Math.max(4, Math.round((e[1] / max) * 100));
-        return '<div class="bar"><span class="lbl">' + e[0] + '%</span>' +
-          '<span class="track"><i style="width:' + w + '%"></i></span>' +
-          '<span class="num">' + e[1] + ' шт</span></div>';
-      }).join('');
-    } else {
-      $('couponSection').style.display = 'none';
-    }
-
-    setText('detailMeta', running ? 'обновляется каждые 2 с' : (stats.rounds ? 'последняя сессия' : '—'));
+    box.querySelectorAll('[data-stop]').forEach((btn) => {
+      btn.addEventListener('click', () => stopAccounts([btn.dataset.stop]));
+    });
   }
 
   /* ---------- logs ---------- */
-  function renderLogs(scroll) {
-    const out = $('logOutput');
-    const filter = state.filter;
+  function filteredLogs() {
     let lines = state.logs;
-    if (filter !== 'all') {
+    if (state.logAccount) {
+      const prefix = '[' + state.logAccount + '] ';
+      lines = lines.filter((line) => line.indexOf(prefix) === 0);
+    }
+    if (state.level !== 'all') {
       lines = lines.filter((line) => {
         const cls = classify(line);
-        if (filter === 'important') return cls !== '' && cls !== 'dim';
-        if (filter === 'coupon') return cls === 'coupon' || cls === 'win';
-        if (filter === 'error') return cls === 'err';
+        if (state.level === 'important') return cls !== '' && cls !== 'dim';
+        if (state.level === 'coupon') return cls === 'coupon' || cls === 'win';
+        if (state.level === 'error') return cls === 'err';
         return true;
       });
     }
+    return lines;
+  }
+
+  function renderLogs(scroll) {
+    const out = $('logOutput');
+    const lines = filteredLogs();
     if (!lines.length) {
       out.innerHTML = '<span class="empty-log">' +
         (state.logs.length ? 'Нет строк по выбранному фильтру.' : 'Лог пуст. Запустите бота, чтобы увидеть события.') +
@@ -661,6 +770,26 @@
       const box = $('logBox');
       box.scrollTop = box.scrollHeight;
     }
+  }
+
+  function updateLogAccountOptions() {
+    const select = $('logAccount');
+    const current = state.logAccount;
+    const labels = [];
+    state.creds.forEach((item) => {
+      const label = accountLabel(item.name);
+      if (labels.indexOf(label) === -1) labels.push(label);
+    });
+    Object.keys(state.accounts).forEach((name) => {
+      const label = state.accounts[name].account || accountLabel(name);
+      if (labels.indexOf(label) === -1) labels.push(label);
+    });
+    const existing = Array.from(select.options).slice(1).map((o) => o.value);
+    if (existing.length === labels.length && labels.every((l, i) => l === existing[i])) return;
+    select.innerHTML = '<option value="">Все аккаунты</option>' +
+      labels.sort().map((l) => '<option value="' + escapeHtml(l) + '">' + escapeHtml(l) + '</option>').join('');
+    if (current && labels.indexOf(current) !== -1) select.value = current;
+    else state.logAccount = '';
   }
 
   async function fetchLogs(force) {
@@ -695,7 +824,11 @@
   }
 
   $('logFilter').addEventListener('change', () => {
-    state.filter = $('logFilter').value;
+    state.level = $('logFilter').value;
+    renderLogs();
+  });
+  $('logAccount').addEventListener('change', () => {
+    state.logAccount = $('logAccount').value;
     renderLogs();
   });
 
@@ -706,8 +839,9 @@
   });
 
   $('btnCopyLogs').addEventListener('click', () => {
-    if (!state.logs.length) { toastError('Лог пуст'); return; }
-    if (window.copyText) window.copyText(state.logs.join('\n'), 'Лог скопирован');
+    const lines = filteredLogs();
+    if (!lines.length) { toastError('Лог пуст'); return; }
+    if (window.copyText) window.copyText(lines.join('\n'), 'Лог скопирован');
     else toastError('Копирование недоступно');
   });
 
@@ -718,11 +852,11 @@
   });
 
   /* ---------- actions ---------- */
-  function collectBody() {
+  function collectBody(names) {
     const body = {
+      accounts: names,
       version: currentForm().version,
       attempt_type: $('attempt_type').value,
-      creds_file: $('creds_file').value,
     };
     const minutes = $('minutes').value.trim();
     const target = $('target').value.trim();
@@ -735,84 +869,72 @@
     return body;
   }
 
-  function validateBeforeStart() {
-    if (!$('creds_file').value) return 'Не выбран файл кредов';
-    const minutes = Number($('minutes').value || 0);
-    const target = Number($('target').value || 0);
-    if (!isFinite(minutes) || minutes < 0) return 'Некорректное время работы';
-    if (!isFinite(target) || target < 0) return 'Некорректный целевой баланс';
-    return null;
-  }
-
-  async function startBot() {
+  async function startAccounts(names) {
     if (state.busy) return;
-    const problem = validateBeforeStart();
-    if (problem) { toastError(problem); return; }
-
+    if (!names.length) { toastError('Выберите хотя бы один аккаунт'); return; }
     state.busy = true;
-    updateUI(state.stats || {});
+    updateStartButton();
     try {
-      await api('/api/farm9/start', {
+      const data = await api('/api/farm9/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(collectBody()),
+        body: JSON.stringify(collectBody(names)),
       });
-      state.logs = [];
-      state.logIndex = 0;
-      renderLogs(false);
-      if (window.toast) window.toast('Бот запущен');
+      if (window.toast) window.toast('Запущено аккаунтов: ' + data.started);
       await fetchStats();
       await fetchLogs(true);
     } catch (e) {
       if (e.message !== 'unauthorized') toastError('Не удалось запустить: ' + e.message);
     } finally {
       state.busy = false;
-      updateUI(state.stats || {});
+      updateStartButton();
+      if (state.stats) updateUI(state.stats);
     }
   }
 
-  async function stopBot(silent) {
-    if (state.busy) return false;
+  async function stopAccounts(names) {
+    if (state.busy) return;
     state.busy = true;
-    updateUI(state.stats || {});
+    updateStartButton();
+    $('btnStopAll').disabled = true;
     try {
-      await api('/api/farm9/stop', { method: 'POST' });
-      if (!silent && window.toast) window.toast('Остановлено');
+      await api('/api/farm9/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(names && names.length ? { accounts: names } : {}),
+      });
+      if (window.toast) window.toast(names && names.length ? 'Остановлено: ' + names.length : 'Все аккаунты остановлены');
       await fetchStats();
-      return true;
+      await fetchLogs(true);
     } catch (e) {
       if (e.message !== 'unauthorized') toastError('Не удалось остановить: ' + e.message);
-      return false;
     } finally {
       state.busy = false;
-      updateUI(state.stats || {});
+      updateStartButton();
+      if (state.stats) updateUI(state.stats);
     }
   }
 
-  async function restartBot() {
+  async function restartSelected() {
     if (state.busy) return;
-    if (state.stats && state.stats.running) {
-      const ok = await stopBot(true);
-      if (!ok) return;
-      // wait until the server reports the bot is really stopped
-      const deadline = Date.now() + 20000;
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 700));
-        try {
-          const stats = await api('/api/farm9/stats');
-          updateUI(stats);
-          if (!stats.running) break;
-        } catch (e) { break; }
-      }
-    }
-    await startBot();
+    const running = runningSet();
+    const toStop = Array.from(state.selected).filter((n) => running[n]);
+    if (toStop.length) await stopAccounts(toStop);
+    const idle = Array.from(state.selected).filter((n) => !runningSet()[n]);
+    if (!idle.length) { toastError('Нет выбранных аккаунтов для запуска'); return; }
+    await startAccounts(idle);
+    if (window.toast) window.toast('Перезапущено: ' + idle.length);
   }
 
-  $('btnStart').addEventListener('click', startBot);
-  $('btnStop').addEventListener('click', () => stopBot(false));
-  $('btnRestart').addEventListener('click', restartBot);
+  $('btnStart').addEventListener('click', () => {
+    const running = runningSet();
+    const names = Array.from(state.selected).filter((n) => !running[n]);
+    startAccounts(names);
+  });
+  $('btnStopAll').addEventListener('click', () => stopAccounts([]));
+  $('btnRestart').addEventListener('click', restartSelected);
 
-  ['attempt_type', 'minutes', 'target', 'creds_file', 'delay', 'gift_min'].forEach((id) => {
+  ['attempt_type', 'minutes', 'target', 'delay', 'gift_min'].forEach((id) => {
     const el = $(id);
     el.addEventListener('change', () => {
       if (id === 'minutes') syncMinutesChips();
@@ -823,21 +945,20 @@
   /* ---------- boot ---------- */
   function boot() {
     const saved = loadSettings();
-    if (saved) {
-      applySettings(saved);
-    } else {
+    if (saved) applySettings(saved);
+    else {
       const active = document.querySelector('.preset.active');
       if (active) $('presetHint').textContent = active.dataset.hint || '';
     }
     syncMinutesChips();
 
     loadCreds().then(() => {
-      const saved = loadSettings();
-      if (saved && saved.creds_file) {
-        const select = $('creds_file');
-        if (Array.from(select.options).some((o) => o.value === saved.creds_file)) {
-          select.value = saved.creds_file;
-        }
+      const again = loadSettings();
+      if (again && Array.isArray(again.accounts)) {
+        const valid = new Set(state.creds.filter((i) => i.valid).map((i) => i.name));
+        state.selected = new Set(again.accounts.filter((n) => valid.has(n)));
+        renderPicker(true);
+        updateStartButton();
       }
     });
 
@@ -846,12 +967,6 @@
 
     setInterval(fetchStats, 2000);
     setInterval(() => fetchLogs(), 1500);
-    setInterval(() => {
-      if (state.stats && state.stats.running && state.stats.started_at) {
-        setText('runElapsed', fmtDuration(Number(state.stats.elapsed_sec || 0) + (Date.now() - state.lastFetchOk) / 1000));
-      }
-    }, 1000);
-
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) { fetchStats(); fetchLogs(); }
     });
