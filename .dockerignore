@@ -18,6 +18,8 @@ venv/
 
 # СЃРµРєСЂРµС‚С‹ Рё Р»РѕРєР°Р»СЊРЅС‹Рµ РґР°РЅРЅС‹Рµ
 cookies.json
+# Токены аккаунтов подаются в контейнер через volume/secrets, не в образ
+capture/credentials*.json
 **/*.db
 **/*.db-*
 web_coupons/coupons.db

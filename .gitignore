@@ -13,6 +13,7 @@ bristol_prefs.xml
 capture/flutter_prefs.xml
 capture/account*_prefs.xml
 capture/credentials.json
+capture/credentials.account*.json
 capture/hive.hive
 .env
 
