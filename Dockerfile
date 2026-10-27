@@ -29,4 +29,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python -c "import os,urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/login' % os.environ.get('PORT','8000'), timeout=4)"
 
+# Make capture modules (farm9_lib, play, ...) importable from web_coupons
+ENV PYTHONPATH=/app/capture
+
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir web_coupons"]
