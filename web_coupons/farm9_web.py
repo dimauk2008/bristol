@@ -43,9 +43,13 @@ class Farm9Controller:
             'coupon_stats': {},  # discount -> count
             'last_10min_stats': {},
             'errors': 0,
+            'wins': 0,
         }
         self._log_buffer: list[str] = []
         self._max_log_lines = 500
+        # Monotonic counters so log polling survives buffer trimming/clearing
+        self._log_total = 0
+        self._log_dropped = 0
     
     @property
     def is_running(self) -> bool:
@@ -56,8 +60,11 @@ class Farm9Controller:
         timestamp = datetime.now().strftime('%H:%M:%S')
         line = f"[{timestamp}] {msg}"
         self._log_buffer.append(line)
+        self._log_total += 1
         if len(self._log_buffer) > self._max_log_lines:
-            self._log_buffer = self._log_buffer[-self._max_log_lines:]
+            drop = len(self._log_buffer) - self._max_log_lines
+            self._log_buffer = self._log_buffer[drop:]
+            self._log_dropped += drop
         try:
             self._log_queue.put_nowait(line)
         except asyncio.QueueFull:
@@ -93,6 +100,8 @@ class Farm9Controller:
         
         self._stop_event.clear()
         self._log_buffer.clear()
+        # Keep counters monotonic: everything logged so far counts as dropped
+        self._log_dropped = self._log_total
         self._stats = {
             'running': True,
             'started_at': datetime.now().isoformat(),
@@ -103,6 +112,7 @@ class Farm9Controller:
             'skipped': 0,
             'coupons': 0,
             'coins': 0,
+            'wins': 0,
             'balance_start': 0,
             'balance': 0,
             'coupon_stats': {},
@@ -373,14 +383,36 @@ class Farm9Controller:
         return token
     
     def get_logs(self, since: int = 0) -> list[str]:
-        """Get logs since index."""
-        return self._log_buffer[since:]
-    
+        """Get logs since monotonic index."""
+        start = max(0, since - self._log_dropped)
+        return self._log_buffer[start:]
+
+    @property
+    def log_total(self) -> int:
+        """Total number of log lines ever added (monotonic)."""
+        return self._log_total
+
     def get_stats(self) -> dict:
         """Get current stats."""
         stats = dict(self._stats)
         stats['running'] = self.is_running
-        stats['logs_count'] = len(self._log_buffer)
+        stats['logs_count'] = self._log_total
+        stats['log_total'] = self._log_total
+        stats.setdefault('wins', 0)
+        # Elapsed time of the current run (frozen after the run stops)
+        elapsed = 0
+        started = stats.get('started_at')
+        if started and self.is_running:
+            try:
+                elapsed = max(0, int((datetime.now() - datetime.fromisoformat(started)).total_seconds()))
+            except (TypeError, ValueError):
+                elapsed = 0
+        elif stats.get('duration_sec') is not None:
+            try:
+                elapsed = max(0, int(stats.get('duration_sec') or 0))
+            except (TypeError, ValueError):
+                elapsed = 0
+        stats['elapsed_sec'] = elapsed
         # Add formatted 10-min stats
         stats['formatted_10min'] = self._format_10min_stats()
         # Add total coupon stats formatted

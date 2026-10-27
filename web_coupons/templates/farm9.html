@@ -1,414 +1,768 @@
 {% extends "base.html" %}
 
-{% block title %}Farm9 Bot Control{% endblock %}
+{% block title %}Farm9 — управление фармером{% endblock %}
+
+{% block head %}
+<style>
+  .f9-top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+  .f9-top h1{margin-bottom:4px}
+  .f9-status{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;font-weight:700;font-size:13px;background:#f2f3f5;color:var(--muted);border:1px solid var(--line)}
+  .f9-status.on{background:var(--green-soft);color:#067647;border-color:#b7ebd1}
+  .f9-status.off{background:#f2f3f5;color:var(--muted)}
+  .f9-status .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .f9-status.on .dot{animation:pulse 1.6s infinite}
+
+  .f9-hero{background:linear-gradient(135deg,#1c1e26,#2c2f3a);color:#fff;border:0;position:relative;overflow:hidden}
+  .f9-hero::after{content:'';position:absolute;right:-90px;top:-90px;width:320px;height:320px;background:radial-gradient(circle,rgba(226,0,26,.45),transparent 65%);pointer-events:none}
+  .f9-hero .f9-meta{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;position:relative;z-index:1}
+  .f9-hero .f9-meta .lbl{color:#c7cad4;font-size:12.5px}
+  .f9-hero .f9-meta .val{font-weight:700}
+  .f9-hero .progress{position:relative;z-index:1;background:rgba(255,255,255,.14);margin:14px 0 16px}
+  .f9-hero .progress > i{background:linear-gradient(90deg,#ff5c6c,var(--red));box-shadow:0 0 16px rgba(255,92,108,.7)}
+  .f9-hero .f9-grid{position:relative;z-index:1}
+  .f9-hero .f9-stat{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+  .f9-hero .f9-stat .k{color:#c7cad4}
+  .f9-hero .f9-stat .v{color:#fff}
+
+  .f9-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  .f9-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px;align-items:start}
+  .f9-form .field{min-width:0}
+  .f9-stat{background:#fbfbfc;border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+  .f9-stat .v{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15;word-break:break-all}
+  .f9-stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-top:3px}
+  .f9-stat .v.green{color:#067647}
+  .f9-stat .v.amber{color:#b54708}
+  .f9-stat .v.red{color:#b42318}
+  .f9-stat .v.blue{color:#175cd3}
+
+  .progress{height:8px;background:#eceef2;border-radius:999px;overflow:hidden}
+  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red-2),var(--red));transition:width .45s ease}
+
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .preset{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:pointer;font:inherit;color:var(--ink-2);transition:border var(--t),box-shadow var(--t),background var(--t);flex:1;min-width:180px}
+  .preset b{font-size:13.5px;color:var(--ink)}
+  .preset span{font-size:12px;color:var(--muted)}
+  .preset:hover{border-color:#d9dce3;box-shadow:var(--shadow-sm)}
+  .preset.active{border-color:var(--red);background:var(--red-soft);box-shadow:0 0 0 3px rgba(226,0,26,.08)}
+  .preset.active b{color:var(--red)}
+
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .chip{padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:all var(--t)}
+  .chip:hover{border-color:#d9dce3;background:#fafbfc}
+  .chip.active{background:var(--red);border-color:var(--red);color:#fff}
+
+  details.adv{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  details.adv summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--ink-2);list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv summary::before{content:'▸';color:var(--muted);transition:transform var(--t)}
+  details.adv[open] summary::before{transform:rotate(90deg)}
+  details.adv .row{margin-top:12px}
+
+  .f9-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+  .f9-actions .btn{min-height:44px}
+  .f9-actions .btn[disabled]{opacity:.45;pointer-events:none}
+
+  .f9-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .f9-toolbar .left,.f9-toolbar .right{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  select.f9-mini,input.f9-mini{width:auto;padding:7px 11px;font-size:13px;border-radius:10px;min-height:36px}
+  select.f9-mini{padding-right:32px}
+  .f9-check{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;user-select:none;padding:7px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .f9-check input{width:15px;height:15px;margin:0;accent-color:var(--red);cursor:pointer}
+  .f9-log{background:#14161d;border-radius:14px;padding:12px 14px;max-height:min(58vh,560px);overflow:auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+  .f9-log .line{display:block;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.62;color:#c9cfdb;padding:1px 0}
+  .f9-log .line .t{color:#6b7385}
+  .f9-log .line.err{color:#ff8f8f}
+  .f9-log .line.win{color:#7ee2a8}
+  .f9-log .line.coupon{color:#ffd166}
+  .f9-log .line.info{color:#7cc7ff}
+  .f9-log .line.dim{color:#8b93a7}
+  .f9-log .empty-log{color:#6b7385;font-style:italic}
+  .f9-count{font-size:12px;font-weight:700;background:#eef0f4;color:var(--ink-2);border-radius:999px;padding:2px 9px}
+
+  .bars{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .bar{display:flex;align-items:center;gap:10px;font-size:13px}
+  .bar .lbl{width:52px;font-weight:700;flex:none;font-variant-numeric:tabular-nums}
+  .bar .track{flex:1;height:10px;background:#eceef2;border-radius:999px;overflow:hidden}
+  .bar .track i{display:block;height:100%;background:linear-gradient(90deg,#ffb020,#f79009);border-radius:999px}
+  .bar .num{width:52px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-weight:600;flex:none}
+
+  .f9-hint{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#fff8eb;color:#93370d;font-size:13px;margin-top:12px;border:1px solid #fde3b8}
+  .f9-hint.hidden{display:none}
+
+  @media (max-width:1023px){
+    .f9-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
+  @media (max-width:640px){
+    .f9-hero .f9-grid,.f9-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .f9-form{grid-template-columns:1fr}
+    .preset{min-width:100%}
+    .f9-actions .btn{flex:1;min-width:130px}
+    .f9-log{max-height:52vh}
+    .f9-top h1{font-size:22px}
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="page-header">
-        <h1>🤖 Farm9 Bot Control</h1>
-        <p class="text-muted">Управление фармером купонов collect-the-bag</p>
+<div class="wrap-inner">
+  <div class="f9-top">
+    <div>
+      <h1>Farm9 · управление фармером</h1>
+      <p class="muted small">Collect-the-Bag: промо-клики, купоны и монеты. Параметры сохраняются в браузере.</p>
+    </div>
+    <div class="f9-status off" id="statusBadge"><span class="dot"></span><span id="statusText">Остановлен</span></div>
+  </div>
+
+  <!-- Live summary -->
+  <div class="card f9-hero">
+    <div class="f9-meta">
+      <div><span class="lbl">Запуск:</span> <span class="val" id="runStarted">—</span></div>
+      <div><span class="lbl">Прошло:</span> <span class="val" id="runElapsed">0 с</span></div>
+      <div id="targetMetaWrap"><span class="lbl">Цель:</span> <span class="val" id="targetMeta">—</span></div>
+      <div><span class="lbl">Аккаунт:</span> <span class="val" id="runAccount">—</span></div>
+    </div>
+    <div class="progress" id="runProgressWrap" style="display:none"><i id="runProgress"></i></div>
+    <div class="f9-grid">
+      <div class="f9-stat"><div class="v" id="statBalance">0</div><div class="k">Баланс</div></div>
+      <div class="f9-stat"><div class="v green" id="statCoins">0</div><div class="k">Монет за сессию</div></div>
+      <div class="f9-stat"><div class="v amber" id="statCoupons">0</div><div class="k">Купонов</div></div>
+      <div class="f9-stat"><div class="v blue" id="statWins">0</div><div class="k">Побед</div></div>
+      <div class="f9-stat"><div class="v" id="statRounds">0</div><div class="k">Раундов</div></div>
+      <div class="f9-stat"><div class="v" id="statPlayed">0</div><div class="k">Сыграно</div></div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="card">
+    <div class="sectionhead">
+      <h2>Параметры запуска</h2>
+      <span class="muted small" id="presetHint">Цель — поймать промо-клик и забрать купон</span>
     </div>
 
-    <!-- Control Panel -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Управление</h5>
-        </div>
-        <div class="card-body">
-            <form id="startForm" class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label">Версия стратегии</label>
-                    <select class="form-select" id="version" name="version">
-                        <option value="promo" selected>v3 Promo — цель: промо-клик</option>
-                        <option value="max">v2 Max — до 2-го проигрыша</option>
-                        <option value="baseline">v1 Baseline — до безопасного максимума</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Тип попытки</label>
-                    <select class="form-select" id="attempt_type" name="attempt_type">
-                        <option value="paid" selected>Платные</option>
-                        <option value="free">Бесплатные</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Время (мин)</label>
-                    <input type="number" class="form-control" id="minutes" name="minutes" min="0" step="1" value="0" placeholder="0 = бесконечно">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Целевой баланс</label>
-                    <input type="number" class="form-control" id="target" name="target" min="0" step="100" value="0" placeholder="0 = нет цели">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Файл кредов</label>
-                    <input type="text" class="form-control" id="creds_file" name="creds_file" value="credentials.account5.json">
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">Задержка</label>
-                    <input type="number" class="form-control" id="delay" name="delay" min="0" step="0.1" value="" placeholder="auto">
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">Gift min</label>
-                    <input type="number" class="form-control" id="gift_min" name="gift_min" min="0" step="1" value="" placeholder="auto">
-                </div>
-            </form>
-            <div class="mt-3 d-flex gap-2">
-                <button id="btnStart" class="btn btn-success btn-lg" onclick="startBot()">
-                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                    ▶ Запустить
-                </button>
-                <button id="btnStop" class="btn btn-danger btn-lg d-none" onclick="stopBot()">
-                    <span class="spinner-border spinner-border-sm d-none" role="status"></span>
-                    ■ Остановить
-                </button>
-                <button class="btn btn-outline-secondary btn-lg" onclick="clearLogs()">🗑 Очистить лог</button>
-            </div>
-        </div>
+    <div class="presets" id="presets">
+      <button type="button" class="preset active" data-version="promo" data-hint="Цель — поймать промо-клик и забрать купон">
+        <b>v3 Promo</b><span>Промо-клик, максимум купонов</span>
+      </button>
+      <button type="button" class="preset" data-version="max" data-hint="Играем до второго проигрыша — баланс и купоны">
+        <b>v2 Max</b><span>До 2-го проигрыша</span>
+      </button>
+      <button type="button" class="preset" data-version="baseline" data-hint="Играем до безопасного максимума по стратегии">
+        <b>v1 Baseline</b><span>Безопасный максимум</span>
+      </button>
     </div>
 
-    <!-- Status Cards -->
-    <div class="row mb-4" id="statusCards">
-        <div class="col-md-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value" id="statRunning">Остановлен</div>
-                    <div class="stat-label">Статус</div>
-                </div>
-            </div>
+    <div class="f9-form">
+      <div class="field">
+        <label for="attempt_type">Тип попытки</label>
+        <select id="attempt_type">
+          <option value="paid">Платные</option>
+          <option value="free">Бесплатные (с ожиданием сброса)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="minutes">Время работы, мин</label>
+        <input type="number" id="minutes" min="0" step="1" value="0" placeholder="0 — без ограничения">
+        <div class="chips" id="minutesChips">
+          <button type="button" class="chip active" data-min="0">∞</button>
+          <button type="button" class="chip" data-min="30">30</button>
+          <button type="button" class="chip" data-min="60">60</button>
+          <button type="button" class="chip" data-min="120">120</button>
+          <button type="button" class="chip" data-min="240">240</button>
         </div>
-        <div class="col-md-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value text-success" id="statBalance">0</div>
-                    <div class="stat-label">Текущий баланс</div>
-                </div>
-            </div>
+      </div>
+      <div class="field">
+        <label for="target">Целевой баланс</label>
+        <input type="number" id="target" min="0" step="100" value="0" placeholder="0 — без цели">
+      </div>
+      <div class="field">
+        <label for="creds_file">Аккаунт (файл кредов)</label>
+        <div style="display:flex;gap:8px">
+          <select id="creds_file" style="flex:1"></select>
+          <button type="button" class="btn ghost sm" id="btnReloadCreds" title="Обновить список">⟳</button>
         </div>
-        <div class="col-md-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value text-warning" id="statCoins">0</div>
-                    <div class="stat-label">Монет за сессию</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value text-info" id="statCoupons">0</div>
-                    <div class="stat-label">Купонов</div>
-                </div>
-            </div>
-        </div>
+        <div class="f9-hint hidden" id="credsHint"></div>
+      </div>
     </div>
 
-    <div class="row mb-4" id="detailStats" style="display: none;">
-        <div class="col-md-2">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value" id="statRounds">0</div>
-                    <div class="stat-label">Раундов</div>
-                </div>
-            </div>
+    <details class="adv" id="advBox">
+      <summary>Дополнительно: задержка и минимальный подарок</summary>
+      <div class="row">
+        <div class="field">
+          <label for="delay">Задержка между раундами, сек</label>
+          <input type="number" id="delay" min="0" step="0.1" value="" placeholder="auto — из стратегии">
         </div>
-        <div class="col-md-2">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value text-success" id="statPlayed">0</div>
-                    <div class="stat-label">Сыграно</div>
-                </div>
-            </div>
+        <div class="field">
+          <label for="gift_min">Gift min</label>
+          <input type="number" id="gift_min" min="0" step="1" value="" placeholder="auto — из стратегии">
         </div>
-        <div class="col-md-2">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value text-secondary" id="statSkipped">0</div>
-                    <div class="stat-label">Пропущено</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value text-danger" id="statErrors">0</div>
-                    <div class="stat-label">Ошибок</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value" id="statPromoSeen">0</div>
-                    <div class="stat-label">Промо видено</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <div class="stat-value" id="statPromoReach">0</div>
-                    <div class="stat-label">Промо достижимо</div>
-                </div>
-            </div>
-        </div>
-    </div>
+      </div>
+    </details>
 
-    <!-- Coupon Stats -->
-    <div class="card mb-4" id="couponStatsCard" style="display: none;">
-        <div class="card-header">
-            <h5 class="mb-0">📊 Статистика купонов (за 10 мин / всего)</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <strong>За последние 10 минут:</strong>
-                    <div id="stats10min" class="text-muted mt-1">ожидание...</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>Всего за сессию:</strong>
-                    <div id="statsTotal" class="text-muted mt-1">нет данных</div>
-                </div>
-            </div>
-            <hr>
-            <div class="row">
-                <div class="col-12">
-                    <strong>По скидкам:</strong>
-                    <div id="couponBreakdown" class="mt-2"></div>
-                </div>
-            </div>
-        </div>
+    <div class="f9-actions">
+      <button type="button" class="btn success" id="btnStart">▶ Запустить</button>
+      <button type="button" class="btn ghost" id="btnRestart">↻ Перезапустить</button>
+      <button type="button" class="btn danger" id="btnStop" disabled>■ Остановить</button>
     </div>
+  </div>
 
-    <!-- Log Panel -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">📋 Лог (последние 500 строк)</h5>
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="autoScroll" checked>
-                <label class="form-check-label small" for="autoScroll">Автопрокрутка</label>
-            </div>
-        </div>
-        <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
-            <pre id="logOutput" class="mb-0 p-3" style="font-size: 0.85rem; line-height: 1.5;"></pre>
-        </div>
+  <!-- Details -->
+  <div class="card">
+    <div class="sectionhead">
+      <h2>Детали и купоны</h2>
+      <span class="muted small" id="detailMeta">—</span>
     </div>
+    <div class="f9-grid">
+      <div class="f9-stat"><div class="v" id="statSkipped">0</div><div class="k">Пропущено</div></div>
+      <div class="f9-stat"><div class="v red" id="statErrors">0</div><div class="k">Ошибок</div></div>
+      <div class="f9-stat"><div class="v" id="statPromoSeen">0</div><div class="k">Промо видено</div></div>
+      <div class="f9-stat"><div class="v" id="statPromoReach">0</div><div class="k">Промо достижимо</div></div>
+      <div class="f9-stat"><div class="v" id="statBalanceStart">0</div><div class="k">Баланс на старте</div></div>
+      <div class="f9-stat"><div class="v" id="statDuration">—</div><div class="k">Длительность</div></div>
+    </div>
+    <div id="couponSection" style="display:none">
+      <div class="muted small mt2"><b>Купоны за сессию:</b> <span id="couponSummary">нет купонов</span></div>
+      <div class="bars" id="couponBars"></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="f9-toolbar">
+      <div class="left">
+        <h2>Лог</h2>
+        <span class="f9-count" id="logCount">0</span>
+        <span class="muted small" id="logStatus">—</span>
+      </div>
+      <div class="right">
+        <select id="logFilter" class="f9-mini" title="Фильтр">
+          <option value="all">Все строки</option>
+          <option value="important">Важное</option>
+          <option value="coupon">Купоны и победы</option>
+          <option value="error">Только ошибки</option>
+        </select>
+        <label class="f9-check"><input type="checkbox" id="autoScroll" checked> Автопрокрутка</label>
+        <button type="button" class="btn ghost sm" id="btnPauseLogs">⏸ Пауза</button>
+        <button type="button" class="btn ghost sm" id="btnCopyLogs">⧉ Копировать</button>
+        <button type="button" class="btn ghost sm" id="btnClearLogs">🗑 Очистить</button>
+      </div>
+    </div>
+    <div class="f9-log" id="logBox">
+      <div id="logOutput"><span class="empty-log">Лог пуст. Запустите бота, чтобы увидеть события.</span></div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let logIndex = 0;
-let statsInterval = null;
-let logsInterval = null;
+(function () {
+  'use strict';
 
-function updateUI(stats) {
-    // Status
-    const running = stats.running;
-    document.getElementById('statRunning').textContent = running ? '🟢 Работает' : '🔴 Остановлен';
-    document.getElementById('statRunning').className = running ? 'stat-value text-success' : 'stat-value text-danger';
-    
-    // Buttons
-    document.getElementById('btnStart').classList.toggle('d-none', running);
-    document.getElementById('btnStop').classList.toggle('d-none', !running);
-    
-    // Stats
-    document.getElementById('statBalance').textContent = stats.balance.toLocaleString();
-    document.getElementById('statCoins').textContent = stats.coins.toLocaleString();
-    document.getElementById('statCoupons').textContent = stats.coupons;
-    document.getElementById('statRounds').textContent = stats.rounds;
-    document.getElementById('statPlayed').textContent = stats.played;
-    document.getElementById('statSkipped').textContent = stats.skipped;
-    document.getElementById('statErrors').textContent = stats.errors;
-    document.getElementById('statPromoSeen').textContent = stats.promo_seen || 0;
-    document.getElementById('statPromoReach').textContent = stats.promo_reachable || 0;
-    
-    // Detail stats visibility
-    document.getElementById('detailStats').style.display = stats.rounds > 0 ? 'flex' : 'none';
-    document.getElementById('couponStatsCard').style.display = (stats.coupons > 0 || (stats.coupon_stats && Object.keys(stats.coupon_stats).length > 0)) ? 'block' : 'none';
-    
-    // Coupon stats
-    document.getElementById('stats10min').textContent = stats.formatted_10min || 'нет данных';
-    document.getElementById('statsTotal').textContent = stats.formatted_total || 'нет купонов';
-    
+  const $ = (id) => document.getElementById(id);
+  const STORAGE_KEY = 'farm9.settings.v1';
+  const MAX_CLIENT_LOGS = 1200;
+
+  const state = {
+    stats: null,
+    logIndex: 0,
+    serverTotal: 0,
+    logs: [],
+    filter: 'all',
+    logsPaused: false,
+    busy: false,
+    unauthorized: false,
+    credsEmpty: false,
+    lastFetchOk: 0,
+  };
+
+  /* ---------- helpers ---------- */
+  function fmtNum(value) {
+    const n = Number(value || 0);
+    return n.toLocaleString('ru-RU');
+  }
+
+  function fmtDuration(sec) {
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h) return h + ' ч ' + String(m).padStart(2, '0') + ' мин';
+    if (m) return m + ' мин ' + String(s).padStart(2, '0') + ' с';
+    return s + ' с';
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function classify(line) {
+    const t = line.toLowerCase();
+    if (t.includes('ошибка') || t.includes('error') || t.includes('не удал') || t.includes('failed')) return 'err';
+    if (t.includes('победа') || t.includes('win_finished') || t.includes('🎉')) return 'win';
+    if (t.includes('купон') || t.includes('coupon') || t.includes('🎁')) return 'coupon';
+    if (t.includes('итого') || t.includes('цель достигнута')) return 'win';
+    if (t.includes('старт') || t.includes('📊') || t.includes('статистика')) return 'info';
+    if (t.includes('пропуск') || t.includes('время вышло') || t.includes('ожид')) return 'dim';
+    return '';
+  }
+
+  function toastError(msg) {
+    if (window.toast) window.toast(msg);
+    else console.error(msg);
+  }
+
+  async function api(url, options) {
+    const resp = await fetch(url, Object.assign({ credentials: 'same-origin' }, options || {}));
+    let data = null;
+    try { data = await resp.json(); } catch (e) { data = null; }
+    if (resp.status === 401) {
+      if (!state.unauthorized) {
+        state.unauthorized = true;
+        toastError('Сессия истекла — обновите страницу и войдите заново');
+      }
+      throw new Error('unauthorized');
+    }
+    state.unauthorized = false;
+    if (!resp.ok) {
+      const msg = (data && data.error) || ('HTTP ' + resp.status);
+      throw new Error(msg);
+    }
+    return data || {};
+  }
+
+  /* ---------- settings persistence ---------- */
+  function currentForm() {
+    return {
+      version: document.querySelector('.preset.active') ? document.querySelector('.preset.active').dataset.version : 'promo',
+      attempt_type: $('attempt_type').value,
+      minutes: $('minutes').value,
+      target: $('target').value,
+      creds_file: $('creds_file').value,
+      delay: $('delay').value,
+      gift_min: $('gift_min').value,
+    };
+  }
+
+  function saveSettings() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentForm())); } catch (e) {}
+  }
+
+  function applySettings(data) {
+    if (!data) return;
+    if (data.version) {
+      const btn = document.querySelector('.preset[data-version="' + data.version + '"]');
+      if (btn) selectPreset(btn, false);
+    }
+    if (data.attempt_type) $('attempt_type').value = data.attempt_type;
+    if (data.minutes !== undefined) $('minutes').value = data.minutes;
+    if (data.target !== undefined) $('target').value = data.target;
+    if (data.delay !== undefined) $('delay').value = data.delay;
+    if (data.gift_min !== undefined) $('gift_min').value = data.gift_min;
+    if (data.creds_file) $('creds_file').dataset.saved = data.creds_file;
+    syncMinutesChips();
+  }
+
+  function loadSettings() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { return null; }
+  }
+
+  /* ---------- presets & chips ---------- */
+  function selectPreset(btn, persist) {
+    document.querySelectorAll('.preset').forEach((b) => b.classList.toggle('active', b === btn));
+    $('presetHint').textContent = btn.dataset.hint || '';
+    if (persist !== false) saveSettings();
+  }
+
+  document.querySelectorAll('.preset').forEach((btn) => {
+    btn.addEventListener('click', () => { if (!state.busy) selectPreset(btn); });
+  });
+
+  function syncMinutesChips() {
+    const value = String($('minutes').value || '0');
+    document.querySelectorAll('#minutesChips .chip').forEach((chip) => {
+      chip.classList.toggle('active', String(chip.dataset.min) === value);
+    });
+  }
+
+  document.querySelectorAll('#minutesChips .chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      $('minutes').value = chip.dataset.min;
+      syncMinutesChips();
+      saveSettings();
+    });
+  });
+
+  /* ---------- creds ---------- */
+  async function loadCreds() {
+    const select = $('creds_file');
+    const hint = $('credsHint');
+    const saved = select.dataset.saved || select.value;
+    try {
+      const data = await api('/api/farm9/creds');
+      const items = data.creds || [];
+      select.innerHTML = '';
+      if (!items.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Нет файлов кредов';
+        select.appendChild(opt);
+        select.disabled = true;
+        state.credsEmpty = true;
+        hint.classList.remove('hidden');
+        hint.innerHTML = 'В папке <span class="mono">' + escapeHtml(data.capture_dir || 'capture') +
+          '</span> нет <span class="mono">credentials*.json</span>. Смонтируйте файл кредов в контейнер.';
+        return;
+      }
+      select.disabled = false;
+      state.credsEmpty = false;
+      hint.classList.add('hidden');
+      items.forEach((item) => {
+        const opt = document.createElement('option');
+        opt.value = item.name;
+        const short = item.user_id ? String(item.user_id).slice(0, 8) : 'нет user_id';
+        opt.textContent = item.name + ' · ' + short + (item.valid ? '' : ' ⚠');
+        select.appendChild(opt);
+      });
+      const wanted = saved || data.default;
+      if (wanted && items.some((i) => i.name === wanted)) select.value = wanted;
+      select.dataset.saved = select.value;
+      saveSettings();
+    } catch (e) {
+      if (e.message !== 'unauthorized') toastError('Не удалось загрузить список кредов: ' + e.message);
+    }
+  }
+
+  $('btnReloadCreds').addEventListener('click', loadCreds);
+
+  /* ---------- stats rendering ---------- */
+  function setText(id, value) {
+    const el = $(id);
+    if (el) el.textContent = value;
+  }
+
+  function updateUI(stats) {
+    state.stats = stats;
+    const running = !!stats.running;
+
+    const badge = $('statusBadge');
+    badge.classList.toggle('on', running);
+    badge.classList.toggle('off', !running);
+    setText('statusText', running ? 'Работает' : 'Остановлен');
+
+    $('btnStart').disabled = running || state.busy;
+    $('btnStop').disabled = !running || state.busy;
+    $('btnRestart').disabled = state.busy;
+    document.querySelectorAll('.preset, #minutesChips .chip, #attempt_type, #minutes, #target, #creds_file, #delay, #gift_min')
+      .forEach((el) => { el.disabled = running || (el === $('creds_file') && state.credsEmpty); });
+
+    setText('statBalance', fmtNum(stats.balance));
+    setText('statCoins', fmtNum(stats.coins));
+    setText('statCoupons', fmtNum(stats.coupons));
+    setText('statWins', fmtNum(stats.wins));
+    setText('statRounds', fmtNum(stats.rounds));
+    setText('statPlayed', fmtNum(stats.played));
+    setText('statSkipped', fmtNum(stats.skipped));
+    setText('statErrors', fmtNum(stats.errors));
+    setText('statPromoSeen', fmtNum(stats.promo_seen));
+    setText('statPromoReach', fmtNum(stats.promo_reachable));
+    setText('statBalanceStart', fmtNum(stats.balance_start));
+
+    const elapsed = Number(stats.elapsed_sec || 0);
+    const durationMin = Number(stats.duration_min || 0);
+    const target = Number(stats.target_balance || 0);
+
+    let durationLabel = fmtDuration(stats.duration_sec || elapsed);
+    if (durationMin > 0 && running) durationLabel = fmtDuration(elapsed) + ' / ' + fmtDuration(durationMin * 60);
+    setText('statDuration', durationLabel);
+
+    setText('runStarted', stats.started_at ? fmtTime(stats.started_at) : '—');
+    setText('runElapsed', stats.started_at ? fmtDuration(elapsed) : '0 с');
+    const credsSelect = $('creds_file');
+    const credsOpt = credsSelect.selectedOptions && credsSelect.selectedOptions[0];
+    setText('runAccount', credsOpt ? credsOpt.textContent.replace(' ⚠', '') : '—');
+
+    const targetMetaWrap = $('targetMetaWrap');
+    if (target > 0) {
+      targetMetaWrap.style.display = '';
+      setText('targetMeta', fmtNum(stats.balance) + ' / ' + fmtNum(target));
+    } else {
+      targetMetaWrap.style.display = 'none';
+    }
+
+    // Progress: by time if a duration is set, otherwise by balance target
+    const wrap = $('runProgressWrap');
+    const bar = $('runProgress');
+    let pct = -1;
+    if (running && durationMin > 0) pct = Math.min(100, (elapsed / (durationMin * 60)) * 100);
+    else if (target > 0 && stats.balance_start > 0) {
+      pct = Math.min(100, Math.max(0, ((stats.balance - stats.balance_start) / (target - stats.balance_start)) * 100));
+    }
+    if (pct >= 0) {
+      wrap.style.display = '';
+      bar.style.width = pct.toFixed(1) + '%';
+    } else {
+      wrap.style.display = 'none';
+    }
+
     // Coupon breakdown
-    if (stats.coupon_stats && Object.keys(stats.coupon_stats).length > 0) {
-        let html = '';
-        for (const [disc, count] of Object.entries(stats.coupon_stats).sort((a,b) => b[0] - a[0])) {
-            html += `<span class="badge bg-primary me-2 mb-1" style="font-size: 0.9rem;">${disc}% — ${count} шт</span>`;
-        }
-        document.getElementById('couponBreakdown').innerHTML = html;
+    const coupons = stats.coupon_stats || {};
+    const entries = Object.keys(coupons).map((k) => [Number(k), Number(coupons[k])])
+      .filter((e) => e[1] > 0).sort((a, b) => b[0] - a[0]);
+    if (entries.length) {
+      $('couponSection').style.display = '';
+      setText('couponSummary', stats.formatted_total || '—');
+      const max = Math.max.apply(null, entries.map((e) => e[1]));
+      $('couponBars').innerHTML = entries.map((e) => {
+        const w = Math.max(4, Math.round((e[1] / max) * 100));
+        return '<div class="bar"><span class="lbl">' + e[0] + '%</span>' +
+          '<span class="track"><i style="width:' + w + '%"></i></span>' +
+          '<span class="num">' + e[1] + ' шт</span></div>';
+      }).join('');
+    } else {
+      $('couponSection').style.display = 'none';
     }
-}
 
-function appendLogs(logs) {
-    const logEl = document.getElementById('logOutput');
-    const autoScroll = document.getElementById('autoScroll').checked;
-    const wasAtBottom = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 10;
-    
-    for (const line of logs) {
-        // Colorize log lines
-        let colored = escapeHtml(line);
-        if (colored.includes('ОШИБКА') || colored.includes('ошибка') || colored.includes('Error') || colored.includes('error')) {
-            colored = `<span class="text-danger">${colored}</span>`;
-        } else if (colored.includes('ПОБЕДА') || colored.includes('Победа') || colored.includes('WIN') || colored.includes('win_finished')) {
-            colored = `<span class="text-success">${colored}</span>`;
-        } else if (colored.includes('Купон') || colored.includes('купон') || colored.includes('COUPON') || colored.includes('🎁')) {
-            colored = `<span class="text-warning">${colored}</span>`;
-        } else if (colored.includes('СТАРТ') || colored.includes('Старт') || colored.includes('старт')) {
-            colored = `<span class="text-info">${colored}</span>`;
-        } else if (colored.includes('ИТОГО') || colored.includes('Итог')) {
-            colored = `<span class="text-primary fw-bold">${colored}</span>`;
-        } else if (colored.includes('📊') || colored.includes('Статистика')) {
-            colored = `<span class="text-info fw-bold">${colored}</span>`;
-        } else if (colored.includes('пропуск') || colored.includes('пропуск')) {
-            colored = `<span class="text-secondary">${colored}</span>`;
-        }
-        logEl.innerHTML += colored + '\n';
+    setText('detailMeta', running ? 'обновляется каждые 2 с' : (stats.rounds ? 'последняя сессия' : '—'));
+  }
+
+  /* ---------- logs ---------- */
+  function renderLogs(scroll) {
+    const out = $('logOutput');
+    const filter = state.filter;
+    let lines = state.logs;
+    if (filter !== 'all') {
+      lines = lines.filter((line) => {
+        const cls = classify(line);
+        if (filter === 'important') return cls !== '' && cls !== 'dim';
+        if (filter === 'coupon') return cls === 'coupon' || cls === 'win';
+        if (filter === 'error') return cls === 'err';
+        return true;
+      });
     }
-    
-    if (autoScroll || wasAtBottom) {
-        logEl.scrollTop = logEl.scrollHeight;
+    if (!lines.length) {
+      out.innerHTML = '<span class="empty-log">' +
+        (state.logs.length ? 'Нет строк по выбранному фильтру.' : 'Лог пуст. Запустите бота, чтобы увидеть события.') +
+        '</span>';
+    } else {
+      out.innerHTML = lines.map((line) => {
+        const cls = classify(line);
+        return '<span class="line ' + cls + '">' + escapeHtml(line) + '</span>';
+      }).join('');
     }
-}
+    setText('logCount', state.logs.length);
+    if (scroll !== false && $('autoScroll').checked) {
+      const box = $('logBox');
+      box.scrollTop = box.scrollHeight;
+    }
+  }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-async function fetchStats() {
+  async function fetchLogs(force) {
+    if (state.logsPaused && !force) return;
     try {
-        const resp = await fetch('/api/farm9/stats');
-        if (resp.ok) {
-            const stats = await resp.json();
-            updateUI(stats);
+      const data = await api('/api/farm9/logs?since=' + state.logIndex);
+      state.serverTotal = Number(data.total || 0);
+      const incoming = Array.isArray(data.logs) ? data.logs : [];
+      if (incoming.length) {
+        state.logs = state.logs.concat(incoming);
+        if (state.logs.length > MAX_CLIENT_LOGS) {
+          state.logs = state.logs.slice(state.logs.length - MAX_CLIENT_LOGS);
         }
+        state.logIndex = state.serverTotal;
+        renderLogs();
+      }
     } catch (e) {
-        console.error('Stats fetch error:', e);
+      if (e.message !== 'unauthorized') setText('logStatus', 'ошибка связи');
     }
-}
+  }
 
-async function fetchLogs() {
+  async function fetchStats() {
+    if (document.hidden) return;
     try {
-        const resp = await fetch(`/api/farm9/logs?since=${logIndex}`);
-        if (resp.ok) {
-            const data = await resp.json();
-            if (data.logs.length > 0) {
-                appendLogs(data.logs);
-                logIndex = data.total;
-            }
-        }
+      const stats = await api('/api/farm9/stats');
+      state.lastFetchOk = Date.now();
+      setText('logStatus', 'онлайн');
+      updateUI(stats);
     } catch (e) {
-        console.error('Logs fetch error:', e);
+      if (e.message !== 'unauthorized') setText('logStatus', 'нет связи');
     }
-}
+  }
 
-async function startBot() {
-    const form = document.getElementById('startForm');
-    const formData = new FormData(form);
-    const body = {};
-    for (const [key, value] of formData.entries()) {
-        if (value !== '') {
-            body[key] = key === 'minutes' || key === 'delay' || key === 'gift_min' ? parseFloat(value) : 
-                       key === 'target' ? parseInt(value) : value;
-        }
-    }
-    
-    const btn = document.getElementById('btnStart');
-    btn.disabled = true;
-    btn.querySelector('.spinner-border').classList.remove('d-none');
-    
-    try {
-        const resp = await fetch('/api/farm9/start', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(body)
-        });
-        const data = await resp.json();
-        if (!resp.ok) {
-            alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
-            btn.disabled = false;
-            btn.querySelector('.spinner-border').classList.add('d-none');
-        }
-    } catch (e) {
-        alert('Ошибка сети: ' + e.message);
-        btn.disabled = false;
-        btn.querySelector('.spinner-border').classList.add('d-none');
-    }
-}
+  $('logFilter').addEventListener('change', () => {
+    state.filter = $('logFilter').value;
+    renderLogs();
+  });
 
-async function stopBot() {
-    const btn = document.getElementById('btnStop');
-    btn.disabled = true;
-    btn.querySelector('.spinner-border').classList.remove('d-none');
-    
+  $('btnPauseLogs').addEventListener('click', () => {
+    state.logsPaused = !state.logsPaused;
+    $('btnPauseLogs').textContent = state.logsPaused ? '▶ Продолжить' : '⏸ Пауза';
+    if (!state.logsPaused) fetchLogs();
+  });
+
+  $('btnCopyLogs').addEventListener('click', () => {
+    if (!state.logs.length) { toastError('Лог пуст'); return; }
+    if (window.copyText) window.copyText(state.logs.join('\n'), 'Лог скопирован');
+    else toastError('Копирование недоступно');
+  });
+
+  $('btnClearLogs').addEventListener('click', () => {
+    state.logs = [];
+    state.logIndex = state.serverTotal;
+    renderLogs(false);
+  });
+
+  /* ---------- actions ---------- */
+  function collectBody() {
+    const body = {
+      version: currentForm().version,
+      attempt_type: $('attempt_type').value,
+      creds_file: $('creds_file').value,
+    };
+    const minutes = $('minutes').value.trim();
+    const target = $('target').value.trim();
+    const delay = $('delay').value.trim();
+    const gift = $('gift_min').value.trim();
+    if (minutes !== '') body.minutes = Number(minutes);
+    if (target !== '') body.target = Number(target);
+    if (delay !== '') body.delay = Number(delay);
+    if (gift !== '') body.gift_min = Number(gift);
+    return body;
+  }
+
+  function validateBeforeStart() {
+    if (!$('creds_file').value) return 'Не выбран файл кредов';
+    const minutes = Number($('minutes').value || 0);
+    const target = Number($('target').value || 0);
+    if (!isFinite(minutes) || minutes < 0) return 'Некорректное время работы';
+    if (!isFinite(target) || target < 0) return 'Некорректный целевой баланс';
+    return null;
+  }
+
+  async function startBot() {
+    if (state.busy) return;
+    const problem = validateBeforeStart();
+    if (problem) { toastError(problem); return; }
+
+    state.busy = true;
+    updateUI(state.stats || {});
     try {
-        await fetch('/api/farm9/stop', {method: 'POST'});
+      await api('/api/farm9/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(collectBody()),
+      });
+      state.logs = [];
+      state.logIndex = 0;
+      renderLogs(false);
+      if (window.toast) window.toast('Бот запущен');
+      await fetchStats();
+      await fetchLogs(true);
     } catch (e) {
-        console.error('Stop error:', e);
+      if (e.message !== 'unauthorized') toastError('Не удалось запустить: ' + e.message);
     } finally {
-        btn.disabled = false;
-        btn.querySelector('.spinner-border').classList.add('d-none');
+      state.busy = false;
+      updateUI(state.stats || {});
     }
-}
+  }
 
-function clearLogs() {
-    document.getElementById('logOutput').innerHTML = '';
-    logIndex = 0;
-}
+  async function stopBot(silent) {
+    if (state.busy) return false;
+    state.busy = true;
+    updateUI(state.stats || {});
+    try {
+      await api('/api/farm9/stop', { method: 'POST' });
+      if (!silent && window.toast) window.toast('Остановлено');
+      await fetchStats();
+      return true;
+    } catch (e) {
+      if (e.message !== 'unauthorized') toastError('Не удалось остановить: ' + e.message);
+      return false;
+    } finally {
+      state.busy = false;
+      updateUI(state.stats || {});
+    }
+  }
 
-// Start polling when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    // Initial stats
+  async function restartBot() {
+    if (state.busy) return;
+    if (state.stats && state.stats.running) {
+      const ok = await stopBot(true);
+      if (!ok) return;
+      // wait until the server reports the bot is really stopped
+      const deadline = Date.now() + 20000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 700));
+        try {
+          const stats = await api('/api/farm9/stats');
+          updateUI(stats);
+          if (!stats.running) break;
+        } catch (e) { break; }
+      }
+    }
+    await startBot();
+  }
+
+  $('btnStart').addEventListener('click', startBot);
+  $('btnStop').addEventListener('click', () => stopBot(false));
+  $('btnRestart').addEventListener('click', restartBot);
+
+  ['attempt_type', 'minutes', 'target', 'creds_file', 'delay', 'gift_min'].forEach((id) => {
+    const el = $(id);
+    el.addEventListener('change', () => {
+      if (id === 'minutes') syncMinutesChips();
+      saveSettings();
+    });
+  });
+
+  /* ---------- boot ---------- */
+  function boot() {
+    const saved = loadSettings();
+    if (saved) {
+      applySettings(saved);
+    } else {
+      const active = document.querySelector('.preset.active');
+      if (active) $('presetHint').textContent = active.dataset.hint || '';
+    }
+    syncMinutesChips();
+
+    loadCreds().then(() => {
+      const saved = loadSettings();
+      if (saved && saved.creds_file) {
+        const select = $('creds_file');
+        if (Array.from(select.options).some((o) => o.value === saved.creds_file)) {
+          select.value = saved.creds_file;
+        }
+      }
+    });
+
     fetchStats();
-    fetchLogs();
-    
-    // Poll stats every 2 seconds
-    statsInterval = setInterval(fetchStats, 2000);
-    // Poll logs every 1 second
-    logsInterval = setInterval(fetchLogs, 1000);
-});
+    fetchLogs(true);
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (statsInterval) clearInterval(statsInterval);
-    if (logsInterval) clearInterval(logsInterval);
-});
+    setInterval(fetchStats, 2000);
+    setInterval(() => fetchLogs(), 1500);
+    setInterval(() => {
+      if (state.stats && state.stats.running && state.stats.started_at) {
+        setText('runElapsed', fmtDuration(Number(state.stats.elapsed_sec || 0) + (Date.now() - state.lastFetchOk) / 1000));
+      }
+    }, 1000);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { fetchStats(); fetchLogs(); }
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
 </script>
-
-<style>
-.stats-card {
-    border-left: 4px solid #0d6efd;
-}
-.stats-card:nth-child(2) { border-left-color: #198754; }
-.stats-card:nth-child(3) { border-left-color: #ffc107; }
-.stats-card:nth-child(4) { border-left-color: #0dcaf0; }
-.stats-card:nth-child(5) { border-left-color: #6f42c1; }
-.stats-card:nth-child(6) { border-left-color: #fd7e14; }
-.stats-card:nth-child(7) { border-left-color: #20c997; }
-.stats-card:nth-child(8) { border-left-color: #e83e8c; }
-
-.stat-value {
-    font-size: 2rem;
-    font-weight: 700;
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-}
-.stat-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-#logOutput {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
-    background: #1e1e1e;
-    color: #d4d4d4;
-    border-radius: 0;
-    border: none;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-</style>
 {% endblock %}

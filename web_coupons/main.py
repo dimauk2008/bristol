@@ -27,7 +27,7 @@ import scheduler
 from bristol import BristolError
 
 # Farm9 web control
-from farm9_web import farm9_controller
+from farm9_web import farm9_controller, CAPTURE_DIR as FARM9_CAPTURE_DIR, VERSIONS as FARM9_VERSIONS
 
 
 @asynccontextmanager
@@ -896,19 +896,62 @@ async def farm9_start(request: Request):
     """Start the farm9 bot."""
     if not _is_admin(request):
         return JSONResponse({'error': 'unauthorized'}, status_code=401)
-    
-    body = await request.json()
-    minutes = float(body.get('minutes', 0) or 0)
-    target = int(body.get('target', 0) or 0)
-    attempt_type = body.get('attempt_type', 'paid')
-    version = body.get('version', 'promo')
-    creds_file = body.get('creds_file', 'credentials.account5.json')
-    delay = body.get('delay')
-    gift_min = body.get('gift_min')
-    
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+
+    def num(key: str, default, cast, minimum: float = 0):
+        """Parse a numeric field, return (value, error)."""
+        raw = body.get(key, default)
+        if raw is None or raw == '':
+            return default, None
+        try:
+            value = cast(float(raw))
+        except (TypeError, ValueError):
+            return None, f'Поле {key}: ожидается число'
+        if value < minimum:
+            return None, f'Поле {key}: значение не может быть меньше {minimum:g}'
+        return value, None
+
+    minutes, err = num('minutes', 0.0, float)
+    if err:
+        return JSONResponse({'error': err}, status_code=400)
+    target, err = num('target', 0, int)
+    if err:
+        return JSONResponse({'error': err}, status_code=400)
+    delay, err = num('delay', None, float)
+    if err:
+        return JSONResponse({'error': err}, status_code=400)
+    gift_min, err = num('gift_min', None, int)
+    if err:
+        return JSONResponse({'error': err}, status_code=400)
+
+    attempt_type = str(body.get('attempt_type') or 'paid')
+    if attempt_type not in ('paid', 'free'):
+        return JSONResponse({'error': 'Неизвестный тип попытки'}, status_code=400)
+
+    version = str(body.get('version') or 'promo')
+    if version not in FARM9_VERSIONS:
+        return JSONResponse({'error': f'Неизвестная стратегия: {version}'}, status_code=400)
+
+    creds_file = str(body.get('creds_file') or 'credentials.account5.json')
+    if Path(creds_file).name != creds_file or '\\' in creds_file or not creds_file.endswith('.json'):
+        return JSONResponse({'error': 'Некорректное имя файла кредов'}, status_code=400)
+    creds_path = FARM9_CAPTURE_DIR / creds_file
+    if not creds_path.is_file():
+        return JSONResponse(
+            {'error': f'Файл кредов не найден: {creds_file}. '
+                      f'Смонтируйте его в {FARM9_CAPTURE_DIR} или выберите другой.'},
+            status_code=400,
+        )
+
     if farm9_controller.is_running:
         return JSONResponse({'error': 'Бот уже запущен'}, status_code=400)
-    
+
     await farm9_controller.start(
         minutes=minutes,
         target=target,
@@ -918,7 +961,7 @@ async def farm9_start(request: Request):
         delay=delay,
         gift_min=gift_min,
     )
-    return JSONResponse({'ok': True})
+    return JSONResponse({'ok': True, 'creds_file': creds_file})
 
 
 @app.post('/api/farm9/stop')
@@ -929,6 +972,39 @@ async def farm9_stop(request: Request):
     
     await farm9_controller.stop()
     return JSONResponse({'ok': True})
+
+
+def _farm9_creds_list() -> list[dict]:
+    """List credential files available in the capture folder."""
+    items: list[dict] = []
+    try:
+        paths = sorted(FARM9_CAPTURE_DIR.glob('credentials*.json'))
+    except OSError:
+        return items
+    for path in paths:
+        if not path.is_file():
+            continue
+        info: dict = {'name': path.name, 'user_id': None, 'valid': False}
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+            if isinstance(data, dict):
+                info['user_id'] = data.get('user_id')
+                info['valid'] = bool(data.get('user_id') and data.get('hash'))
+        except (OSError, ValueError):
+            pass
+        items.append(info)
+    return items
+
+
+@app.get('/api/farm9/creds')
+async def farm9_creds(request: Request):
+    """List credential files for the start form."""
+    if not _is_admin(request):
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    creds = _farm9_creds_list()
+    names = [c['name'] for c in creds]
+    default = 'credentials.account5.json' if 'credentials.account5.json' in names else (names[0] if names else '')
+    return JSONResponse({'creds': creds, 'default': default, 'capture_dir': str(FARM9_CAPTURE_DIR)})
 
 
 @app.get('/api/farm9/stats')
@@ -947,4 +1023,4 @@ async def farm9_logs(request: Request, since: int = 0):
         return JSONResponse({'error': 'unauthorized'}, status_code=401)
     
     logs = farm9_controller.get_logs(since)
-    return JSONResponse({'logs': logs, 'total': len(farm9_controller._log_buffer)})
+    return JSONResponse({'logs': logs, 'total': farm9_controller.log_total})
