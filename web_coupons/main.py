@@ -12,7 +12,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Request, Form, HTTPException, status
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
@@ -51,7 +51,45 @@ app = FastAPI(title='Coupons & Card QR', lifespan=lifespan)
 
 BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=BASE_DIR / 'templates')
-app.mount('/static', StaticFiles(directory=BASE_DIR / 'static'), name='static')
+
+
+class CouponStaticFiles(StaticFiles):
+    """Статика + запасной источник картинок купонов из БД.
+
+    Файловая система контейнера эфемерная: после деплоя скачанные картинки
+    пропадают, хотя в БД остаются ссылки /static/img/<номер>.png. Если файла
+    нет, отдаём байты из таблицы bristol_images.
+    """
+
+    async def get_response(self, path, scope):
+        try:
+            response = await super().get_response(path, scope)
+        except Exception:
+            response = None
+        if response is not None and response.status_code != 404:
+            return response
+        norm = path.replace('\\', '/')
+        if not norm.startswith('img/'):
+            return response if response is not None else Response(status_code=404)
+        number = Path(norm).stem
+        allowed = set('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-')
+        if not number or not set(number) <= allowed:
+            return response if response is not None else Response(status_code=404)
+        try:
+            row = await run_in_threadpool(bristol.get_coupon_image, number)
+        except Exception:
+            row = None
+        if not row:
+            return response if response is not None else Response(status_code=404)
+        data, media_type = row
+        return Response(
+            content=data,
+            media_type=media_type,
+            headers={'Cache-Control': 'public, max-age=31536000, immutable'},
+        )
+
+
+app.mount('/static', CouponStaticFiles(directory=BASE_DIR / 'static'), name='static')
 
 init_db()
 

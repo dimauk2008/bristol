@@ -206,6 +206,13 @@ def init_db():
         title TEXT,
         PRIMARY KEY (account_id, number)
     )''')
+    _blob = 'BYTEA' if IS_PG else 'BLOB'
+    cur.execute(f'''CREATE TABLE IF NOT EXISTS bristol_images (
+        number TEXT PRIMARY KEY,
+        content {_blob} NOT NULL,
+        content_type TEXT,
+        updated_at TEXT
+    )''')
     cur.execute('''CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT

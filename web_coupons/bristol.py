@@ -964,25 +964,90 @@ def fetch_image(url: str, token: str, timeout: int = 25) -> bytes:
 
 
 def _cache_coupon_images(coupons: list, token: str) -> dict:
-    """Скачивает картинки купонов локально (CDN-ссылки с подписью истекают)."""
+    """Скачивает картинки купонов локально (CDN-ссылки с подписью истекают).
+
+    Байты новых картинок дублируются в БД: файловая система контейнера
+    эфемерная, после деплоя/рестарта локальные файлы пропадают, и картинки
+    начинали отдавать 404. Из БД они отдаются через /static/img/... как fallback.
+    """
     IMG_DIR.mkdir(parents=True, exist_ok=True)
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT number FROM bristol_images')
+    stored = {r['number'] for r in cur.fetchall()}
+    conn.close()
 
     def _dl(c):
         n = c.get('number')
         u = c.get('image_url')
         if not n or not u:
-            return n, u
+            return n, u, None
+        if n in stored:
+            return n, f'/static/img/{n}.png', None
+        p = IMG_DIR / (n + '.png')
+        if p.exists() and p.stat().st_size > 0:
+            return n, f'/static/img/{n}.png', None
         try:
             raw = fetch_image(u, token)
             if raw[:8] == b'\x89PNG\r\n\x1a\n' or raw[:2] == b'\xff\xd8':
-                (IMG_DIR / (n + '.png')).write_bytes(raw)
-                return n, f'/static/img/{n}.png'
+                content_type = 'image/png' if raw[:8] == b'\x89PNG\r\n\x1a\n' else 'image/jpeg'
+                try:
+                    p.write_bytes(raw)
+                except OSError:
+                    pass
+                return n, f'/static/img/{n}.png', (raw, content_type)
         except Exception:
             pass
-        return n, u
+        return n, u, None
 
     with ThreadPoolExecutor(max_workers=8) as ex:
-        return dict(ex.map(_dl, coupons))
+        results = list(ex.map(_dl, coupons))
+
+    fresh = [(n, data) for n, _url, data in results if data]
+    if fresh:
+        now = datetime.now(timezone.utc).isoformat()
+        conn = get_conn()
+        cur = conn.cursor()
+        for n, (raw, content_type) in fresh:
+            cur.execute(
+                'INSERT INTO bristol_images (number, content, content_type, updated_at) '
+                'VALUES (?,?,?,?) ON CONFLICT(number) DO UPDATE SET '
+                'content=excluded.content, content_type=excluded.content_type, '
+                'updated_at=excluded.updated_at',
+                (n, raw, content_type, now),
+            )
+        conn.commit()
+        conn.close()
+
+    return {n: url for n, url, _ in results if n}
+
+
+def get_coupon_image(number: str):
+    """Байты картинки купона из БД: (data, content_type) или None."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute('SELECT content, content_type FROM bristol_images WHERE number=?', (number,))
+        row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    data = row['content']
+    if isinstance(data, memoryview):
+        data = data.tobytes()
+    return data, (row['content_type'] or 'image/png')
+
+
+def _prune_coupon_images(cur) -> None:
+    """Удалить из БД картинки, на которые больше не ссылается ни один купон."""
+    try:
+        cur.execute(
+            'DELETE FROM bristol_images '
+            'WHERE number NOT IN (SELECT number FROM bristol_coupons)'
+        )
+    except Exception:
+        pass
 
 
 def _ocr_coupon_meta(coupons: list, local_images: dict) -> dict:
@@ -1094,6 +1159,7 @@ def _sync_impl(account_id=None) -> dict:
                     now,
                 ),
             )
+        _prune_coupon_images(cur)
         conn.commit()
         conn.close()
 
