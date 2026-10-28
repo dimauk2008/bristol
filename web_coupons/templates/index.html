@@ -24,6 +24,19 @@
 .ccard .cttl{font-weight:700;letter-spacing:-.01em;line-height:1.3}
 .ccard .ccap{color:var(--muted);font-size:12.5px;word-break:break-word}
 .ccard .cactions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 14px;margin-top:auto}
+.plist{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff}
+.phead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.pdate{font-weight:700;letter-spacing:-.01em}
+.pshop{color:var(--muted);font-size:12.5px;margin-top:2px}
+.pright{text-align:right}
+.psum{font-weight:800;font-size:18px;letter-spacing:-.02em}
+.ptable{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+.ptable th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
+.ptable td{padding:7px 8px;border-bottom:1px solid #f1f2f5;vertical-align:top}
+.ptable tr:last-child td{border-bottom:0}
+.ptable th:last-child,.ptable td:last-child{text-align:right}
+.nowrap{white-space:nowrap}
 @media (max-width:560px){
 #blist.cgrid{grid-template-columns:1fr}
 }
@@ -67,6 +80,7 @@
 <div class='tabs'>
   <button class='tab active' data-tab='sessions'>Сессии</button>
   <button class='tab' data-tab='bristol'>Купоны Бристоль <span class='count' id='count-bristol'>{{ bristol_coupons|length }}</span></button>
+  <button class='tab' data-tab='purchases'>История покупок <span class='count' id='count-purchases'>{{ purchases_total }}</span></button>
   <button class='tab' data-tab='manual'>Ручные купоны <span class='count' id='count-manual'>{{ coupons|length }}</span></button>
   <a class='tab' href='/farm9' target='_blank' style='text-decoration:none'>🤖 Farm9 Bot</a>
   <button class='tab' data-tab='settings'>Настройки</button>
@@ -311,6 +325,79 @@
   {% else %}
   <div class='card'><div class='empty'>Ручных купонов нет.</div></div>
   {% endif %}
+</div>
+
+{# ================= ИСТОРИЯ ПОКУПОК ================= #}
+<div class='panel' id='panel-purchases'>
+  {% if not purchases_by_account %}
+  <div class='card'><div class='empty'>
+    <div>Аккаунты не добавлены.</div>
+  </div></div>
+  {% endif %}
+  {% for acc in purchases_by_account %}
+  <div class='card'>
+    <div class='sectionhead'>
+      <h2>{{ acc.name }}</h2>
+      <span class='badge {% if acc.is_active %}ok{% else %}off{% endif %}'>{% if acc.is_active %}активная карта{% else %}карта{% endif %}</span>
+      <span class='spacer'></span>
+      {% if acc.phone %}<span class='small muted mono'>{{ acc.phone }}</span>{% endif %}
+      <span class='badge'>{{ acc.count }} покупок</span>
+      <span class='badge'>{{ acc.total_display }} ₽</span>
+    </div>
+    <div class='small muted'>
+      {% if acc.synced_at %}История обновлена: {{ acc.synced_at }}{% else %}История ещё не загружалась — нажмите «Синхронизировать».{% endif %}
+      {% if acc.error %}<span style='color:#b42318'> · {{ acc.error }}</span>{% endif %}
+    </div>
+
+    {% if acc.purchases %}
+    <div class='plist'>
+      {% for p in acc.purchases %}
+      <div class='pcard'>
+        <div class='phead'>
+          <div>
+            <div class='pdate'>{{ p.date_display or 'дата неизвестна' }}</div>
+            <div class='pshop'>{{ p.shop_name or 'Магазин не указан' }}</div>
+          </div>
+          <div class='pright'>
+            <div class='psum'>{{ p.total_text or (p.total ~ ' ₽' if p.total is not none else '—') }}</div>
+            <div class='small muted'>{% if p.number %}Чек №{{ p.number }}{% endif %}{% if p.items_count %} · {{ p.items_count }}{% endif %}</div>
+          </div>
+        </div>
+
+        {% if p.products %}
+        <table class='ptable'>
+          <thead><tr><th>Товар</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+          <tbody>
+          {% for it in p.products %}
+            <tr>
+              <td>{{ it.name or it.sku_name or '—' }}</td>
+              <td class='nowrap'>{{ it.quantity if it.quantity is not none else '' }} {{ it.mes_unit or '' }}</td>
+              <td class='nowrap'>{{ '%.2f'|format(it.total or 0) }} ₽</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class='small muted'>Состав покупки не загружен{% if p.type and p.type != 'receipt' %} · тип: {{ p.type }}{% endif %}.</div>
+        {% endif %}
+
+        {% if p.fiscal %}
+        {% set f = p.fiscal[0] %}
+        <div class='small muted mt'>
+          Фискальные данные:
+          {% if f.fiscal_number %}ФД {{ f.fiscal_number }}{% endif %}
+          {% if f.fn_serial_number %} · ФН {{ f.fn_serial_number }}{% endif %}
+          {% if f.kkt_reg_number %} · ККТ {{ f.kkt_reg_number }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty small'>Покупок по этой карте пока нет.</div>
+    {% endif %}
+  </div>
+  {% endfor %}
 </div>
 
 {# ================= НАСТРОЙКИ ================= #}

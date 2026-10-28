@@ -369,6 +369,32 @@ def _discount_counts(account_id=None) -> list:
 
 # ---------- admin panel ----------
 
+def _purchases_by_account(accounts: list, active_id) -> list:
+    """История покупок по каждой карте/аккаунту для вкладки «История покупок»."""
+    out = []
+    for a in accounts or []:
+        aid = a.get('id')
+        try:
+            items = bristol.get_stored_purchases(aid, limit=50)
+            meta = bristol.get_meta(aid)
+        except Exception:
+            items, meta = [], {}
+        total = sum(p.get('total') or 0 for p in items)
+        out.append({
+            'account': a,
+            'purchases': items,
+            'is_active': aid == active_id,
+            'name': meta.get('name') or a.get('name') or f'Аккаунт {aid}',
+            'phone': meta.get('phone') or a.get('phone') or '',
+            'count': len(items),
+            'total': total,
+            'total_display': f'{total:.2f}',
+            'synced_at': (meta.get('purchases_synced_at') or '')[:16].replace('T', ' '),
+            'error': meta.get('last_purchases_error') or '',
+        })
+    return out
+
+
 @app.get('/', response_class=HTMLResponse)
 async def index(request: Request):
     aid = get_active_account_id()
@@ -387,6 +413,8 @@ async def index(request: Request):
     except Exception:
         bristol_meta = {}
     bristol_coupons = bristol.get_stored_coupons(aid)
+    accounts = bristol.accounts_list()
+    purchases_by_account = _purchases_by_account(accounts, aid)
     return templates.TemplateResponse(request, 'index.html', {
         'sessions': sessions,
         'coupons': coupons,
@@ -394,7 +422,9 @@ async def index(request: Request):
         'bristol_coupons': bristol_coupons,
         'discounts': _discount_counts(aid),
         'grants': _active_grants(aid),
-        'accounts': bristol.accounts_list(),
+        'accounts': accounts,
+        'purchases_by_account': purchases_by_account,
+        'purchases_total': sum(x['count'] for x in purchases_by_account),
         'active_account_id': aid,
         'auto': scheduler.status(),
         'durations': DURATION_LABELS,

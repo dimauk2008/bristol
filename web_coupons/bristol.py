@@ -13,6 +13,7 @@ import tempfile
 import threading
 import urllib.error
 import urllib.request
+from urllib.parse import quote
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -250,6 +251,8 @@ BASE_DIR = Path(__file__).parent
 IMG_DIR = BASE_DIR / 'static' / 'img'
 API = os.environ.get('BRISTOL_API', 'https://api.mobile.bristol.ru')
 X_API_KEY = os.environ.get('BRISTOL_X_API_KEY', 'e3d7d5678cd42574ce055966496b02f3')
+APP_VERSION = os.environ.get('BRISTOL_APP_VERSION', '9.0.5+1030')
+BUILD_NUMBER = os.environ.get('BRISTOL_BUILD_NUMBER', '1030')
 APP_VERSION = '9.0.5+1030'
 HEADERS_UA = 'Dart/3.0 (dart:io)'
 
@@ -863,6 +866,8 @@ def _api_get(path: str, token: str | None = None, timeout: int = 20, _retry: boo
         'Authorization': 'Bearer ' + token,
         'User-Agent': HEADERS_UA,
         'X-API-KEY': X_API_KEY,
+        'appversion': APP_VERSION,
+        'buildnumber': BUILD_NUMBER,
     }
     try:
         _, raw = _http('GET', path, headers, timeout=timeout)
@@ -1118,6 +1123,234 @@ def _ocr_coupon_meta(coupons: list, local_images: dict) -> dict:
     return out
 
 
+def fetch_transactions(month: int, year: int, token: str | None = None,
+                       filter_type: str = 'all', count: int = 100) -> list:
+    """Операции по карте за месяц (покупки/чеки и прочие начисления)."""
+    if token is None:
+        token = get_token()
+    data = _api_get(
+        f'/api/v3/transactions?page=1&count={int(count)}&last_order_id=0'
+        f'&month={int(month)}&year={int(year)}&filter={filter_type}&consumer=mobile',
+        token,
+    )
+    txs = data.get('transactions')
+    return txs if isinstance(txs, list) else []
+
+
+def fetch_receipt(receipt_id: str, token: str | None = None) -> dict:
+    """Детали чека: магазин, товары, суммы, фискальные данные."""
+    if token is None:
+        token = get_token()
+    return _api_get(f'/api/v2/receipts/{quote(str(receipt_id))}?consumer=mobile', token)
+
+
+def _purchase_months(months: int, rng: dict | None = None) -> list:
+    """Последние N месяцев (свежие первыми), ограниченные доступным периодом."""
+    now = datetime.now()
+    total = max(1, min(int(months), 36))
+    out = []
+    y, m = now.year, now.month
+    for _ in range(total):
+        out.append((y, m))
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    y_from = (rng or {}).get('year_from')
+    m_from = (rng or {}).get('month_from')
+    if isinstance(y_from, int) and isinstance(m_from, int):
+        out = [(y, m) for y, m in out if (y, m) >= (y_from, m_from)]
+    return out
+
+
+def _purchase_key(tx: dict) -> str:
+    receipt = tx.get('receipt') if isinstance(tx.get('receipt'), dict) else None
+    if receipt and receipt.get('id'):
+        return str(receipt['id'])
+    raw = json.dumps(tx, ensure_ascii=False, sort_keys=True)
+    return 'txn-' + hashlib.sha1(raw.encode('utf-8')).hexdigest()[:24]
+
+
+def _purchase_row(tx: dict, detail: dict | None) -> dict:
+    receipt = tx.get('receipt') if isinstance(tx.get('receipt'), dict) else {}
+    src = detail or {}
+    date = src.get('date') or receipt.get('date') or ''
+    total_text = src.get('total_price') or tx.get('total_price') or ''
+    total = src.get('total_by_doc')
+    if total is None:
+        digits = re.sub(r'[^0-9,.\-]', '', str(total_text)).replace(',', '.')
+        try:
+            total = float(digits)
+        except ValueError:
+            total = None
+    return {
+        'purchase_id': _purchase_key(tx),
+        'type': tx.get('type') or ('receipt' if receipt else ''),
+        'number': src.get('code') or receipt.get('number') or '',
+        'purchase_date': date,
+        'total': total,
+        'total_text': total_text,
+        'shop_name': src.get('shop_name') or '',
+        'items_count': src.get('cart_items_count') or '',
+        'products': src.get('purchased_products') or [],
+        'fiscal': src.get('fiscal_operations') or [],
+        'raw': src or tx,
+    }
+
+
+def sync_purchases(account_id=None, token: str | None = None, months: int | None = None) -> dict:
+    """Загружает историю покупок по карте за последние месяцы.
+
+    Ошибки не пробрасываются наружу: история — вторичные данные, она не должна
+    ломать синхронизацию купонов и QR. Возвращает {stored, new, error}.
+    """
+    aid = _aid(account_id)
+    if token is None:
+        token = get_token(account_id=aid)
+    if months is None:
+        try:
+            months = int(os.environ.get('BRISTOL_PURCHASE_MONTHS', '6'))
+        except ValueError:
+            months = 6
+
+    rng = {}
+    try:
+        rng = _api_get('/api/v3/transactions/months_list?consumer=mobile', token)
+    except BristolError as e:
+        log.warning('account %s: список месяцев покупок недоступен: %s', aid, e)
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute('SELECT purchase_id, raw FROM bristol_purchases WHERE account_id=?', (aid,))
+    existing = {r['purchase_id']: bool(r['raw']) for r in cur.fetchall()}
+    conn.close()
+
+    now = datetime.now(timezone.utc).isoformat()
+    rows = []
+    errors = []
+    details_left = 80
+    for year, month in _purchase_months(months, rng):
+        try:
+            txs = fetch_transactions(month, year, token)
+        except BristolError as e:
+            errors.append(f'{month:02d}.{year}: {e}')
+            continue
+        for tx in txs:
+            receipt = tx.get('receipt') if isinstance(tx.get('receipt'), dict) else None
+            rid = str(receipt.get('id')) if receipt and receipt.get('id') else ''
+            detail = None
+            if rid:
+                if existing.get(rid):
+                    # Детали уже сохранены — повторно не запрашиваем.
+                    continue
+                if details_left > 0:
+                    details_left -= 1
+                    try:
+                        detail = fetch_receipt(rid, token)
+                    except BristolError as e:
+                        errors.append(f'чек {receipt.get("number") or rid}: {e}')
+            row = _purchase_row(tx, detail)
+            if rid and detail is None:
+                # Детали не получены — сохраняем строку, но без признака
+                # «детали загружены», чтобы повторить запрос при следующей
+                # синхронизации.
+                row['raw'] = {}
+            rows.append(row)
+
+    if rows:
+        conn = get_conn()
+        cur = conn.cursor()
+        for r in rows:
+            cur.execute(
+                '''INSERT INTO bristol_purchases
+                   (account_id, purchase_id, type, number, purchase_date, total, total_text,
+                    shop_name, items_count, products, fiscal, raw, synced_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(account_id, purchase_id) DO UPDATE SET
+                     type=excluded.type,
+                     number=excluded.number,
+                     purchase_date=excluded.purchase_date,
+                     total=excluded.total,
+                     total_text=excluded.total_text,
+                     shop_name=excluded.shop_name,
+                     items_count=excluded.items_count,
+                     products=excluded.products,
+                     fiscal=excluded.fiscal,
+                     raw=excluded.raw,
+                     synced_at=excluded.synced_at''',
+                (
+                    aid,
+                    r['purchase_id'],
+                    r['type'],
+                    r['number'],
+                    r['purchase_date'],
+                    r['total'],
+                    r['total_text'],
+                    r['shop_name'],
+                    r['items_count'],
+                    json.dumps(r['products'], ensure_ascii=False),
+                    json.dumps(r['fiscal'], ensure_ascii=False),
+                    json.dumps(r['raw'], ensure_ascii=False),
+                    now,
+                ),
+            )
+        conn.commit()
+        conn.close()
+        log.info('account %s: покупок сохранено %s', aid, len(rows))
+
+    return {
+        'stored': _stored_purchase_count(aid),
+        'new': len(rows),
+        'error': '; '.join(errors[:3]),
+    }
+
+
+def _stored_purchase_count(account_id) -> int:
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute('SELECT COUNT(*) AS n FROM bristol_purchases WHERE account_id=?', (account_id,))
+        row = cur.fetchone()
+    finally:
+        conn.close()
+    return int(row['n'] or 0) if row else 0
+
+
+def _parse_json(text, default):
+    if not text:
+        return default
+    if isinstance(text, (list, dict)):
+        return text
+    try:
+        value = json.loads(text)
+    except (TypeError, ValueError):
+        return default
+    return value if isinstance(value, type(default)) else default
+
+
+def get_stored_purchases(account_id=None, limit: int = 100) -> list:
+    """Сохранённые покупки по карте, свежие первыми."""
+    aid = _aid(account_id)
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        'SELECT purchase_id, type, number, purchase_date, total, total_text, shop_name, '
+        'items_count, products, fiscal, synced_at FROM bristol_purchases '
+        'WHERE account_id=? ORDER BY purchase_date DESC, purchase_id DESC LIMIT ?',
+        (aid, int(limit)),
+    )
+    out = []
+    for r in cur.fetchall():
+        row = dict(r)
+        row['products'] = _parse_json(row.get('products'), [])
+        row['fiscal'] = _parse_json(row.get('fiscal'), [])
+        date = row.get('purchase_date') or ''
+        row['date_display'] = date[:16].replace('T', ' ')
+        out.append(row)
+    conn.close()
+    return out
+
+
 def sync(account_id=None) -> dict:
     aid = _aid(account_id)
     with _sync_lock(aid):
@@ -1207,6 +1440,21 @@ def _sync_impl(account_id=None) -> dict:
         conn.close()
 
     stored_count = _stored_coupon_count(aid)
+    purchases_total = _stored_purchase_count(aid)
+    purchases_error = ''
+    purchases_new = 0
+    try:
+        pres = sync_purchases(aid, token)
+        purchases_total = pres.get('stored', purchases_total)
+        purchases_new = pres.get('new', 0)
+        purchases_error = pres.get('error') or ''
+    except BristolError as e:
+        purchases_error = str(e)
+        log.warning('account %s: история покупок не обновлена: %s', aid, purchases_error)
+    except Exception as e:  # noqa: BLE001 — история не должна ломать синхронизацию
+        purchases_error = str(e)
+        log.exception('account %s: ошибка загрузки истории покупок', aid)
+
     meta = {
         'phone': user.get('phone', ''),
         'name': ' '.join(x for x in (user.get('first_name'), user.get('last_name')) if x),
@@ -1214,6 +1462,10 @@ def _sync_impl(account_id=None) -> dict:
         'loyalty_status': user.get('loyalty_status', ''),
         'synced_at': now,
         'coupon_count': stored_count,
+        'purchase_count': purchases_total,
+        'purchase_new': purchases_new,
+        'purchases_synced_at': now,
+        'last_purchases_error': purchases_error,
         'card_qr': card_qr,
         'card_schedule': schedule,
         'last_coupons_error': coupons_error,

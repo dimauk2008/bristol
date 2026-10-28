@@ -213,6 +213,24 @@ def init_db():
         content_type TEXT,
         updated_at TEXT
     )''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS bristol_purchases (
+        account_id INTEGER NOT NULL DEFAULT 1,
+        purchase_id TEXT NOT NULL,
+        type TEXT,
+        number TEXT,
+        purchase_date TEXT,
+        total REAL,
+        total_text TEXT,
+        shop_name TEXT,
+        items_count TEXT,
+        products TEXT,
+        fiscal TEXT,
+        raw TEXT,
+        synced_at TEXT,
+        PRIMARY KEY (account_id, purchase_id)
+    )''')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_bristol_purchases_acc_date '
+                'ON bristol_purchases (account_id, purchase_date DESC)')
     cur.execute('''CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT
